@@ -8,7 +8,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/skywalkw3r/talos-klube.git
-    path: app/charts/root-app/
+    path: app/charts/root-app
     targetRevision: HEAD
   destination:
     server: https://kubernetes.default.svc
