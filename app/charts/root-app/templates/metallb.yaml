@@ -7,16 +7,16 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://prometheus-community.github.io/helm-charts
-    chart: prometheus
-    targetRevision: 27.1.0
-    helm:
-      values: |
-        pushgateway:
-          enabled: false
+    repoURL: https://metallb.github.io/metallb
+    chart: metallb
+    targetRevision: 0.14.9
+    # helm:
+    #   values: |
+    #     pushgateway:
+    #       enabled: false
   destination:
     server: https://kubernetes.default.svc
-    namespace: prometheus
+    namespace: metallb-system
   syncPolicy:
     automated:
       prune: true
