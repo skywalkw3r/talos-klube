@@ -1,0 +1,14 @@
+# exclude mac thumbnail file
+.DS_Store
+
+# exclude helm chart .tgz files, The .tgz file is only required for the initial installation from our local machine. To avoid accidentally committing it
+app/charts/**/charts
+
+# exclude config files for k8
+kubeconfig
+
+# exclude config files for talos
+talosconfig
+talosctl
+
+bootstrap/
