@@ -1,22 +1,18 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: prometheus
+  name: ingress-nginx
   finalizers:
   - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   source:
-    repoURL: https://prometheus-community.github.io/helm-charts
-    chart: prometheus
-    targetRevision: 27.1.0
-    helm:
-      values: |
-        pushgateway:
-          enabled: false
+    repoURL: https://kubernetes.github.io/ingress-nginx
+    chart: ingress-nginx
+    targetRevision: 4.12.0
   destination:
     server: https://kubernetes.default.svc
-    namespace: prometheus
+    namespace: ingress-nginx
   syncPolicy:
     automated:
       prune: true
