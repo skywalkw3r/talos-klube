@@ -9,23 +9,14 @@ spec:
   source:
     repoURL: https://charts.rook.io/release
     chart: rook-ceph
-    targetRevision: 0.14.9
-    # helm:
-    #   values: |
-    #     configInline:
-    #       address-pools:
-    #       - name: 5-dvs-servers
-    #         protocol: layer2
-    #         addresses:
-    #         - 10.5.5.195-10.5.5.200
-    #       l2-advertisements:
-    #       - name: default
-    #         ipAddressPools:
-    #         - 5-dvs-servers
+    targetRevision: 1.16.2
   destination:
     server: https://kubernetes.default.svc
     namespace: rook-ceph
   syncPolicy:
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
     automated:
       prune: true
       selfHeal: true
