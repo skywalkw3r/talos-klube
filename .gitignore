@@ -13,3 +13,5 @@ talosctl
 
 bootstrap/
 controlplane.yaml
+
+app/cilium/
