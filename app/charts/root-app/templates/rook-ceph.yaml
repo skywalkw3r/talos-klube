@@ -10,9 +10,9 @@ spec:
     repoURL: https://charts.rook.io/release
     chart: rook-ceph
     targetRevision: 1.16.2
-      helm:
-        values: |
-          operatorNamespace: rook-ceph 
+      # helm:
+      #   values: |
+      #     operatorNamespace: rook-ceph 
   destination:
     server: https://kubernetes.default.svc
     namespace: rook-ceph
