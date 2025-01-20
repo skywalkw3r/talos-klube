@@ -13,7 +13,7 @@ spec:
     helm:
       values: |
         general.domain: vault.lab.homelabz.xyz
-        general.ingress.enabled: false # need to install nginx
+        general.ingress.enabled: false
         general.email.replyToEmail: vault@homelabz.xyz
         general.email.smtpHost: smtp.gmail.com
         general.email.smtpPort: 587
