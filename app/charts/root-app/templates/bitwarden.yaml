@@ -25,10 +25,10 @@ spec:
                 name: tls-secret
                 clusterIssuer: letsencrypt-staging
           email:
-            replyToEmail: vault@homelabz.xyz
-            smtpHost: smtp.gmail.com
-            smtpPort: 587
-            smtpSsl: true
+            replyToEmail: 'vault@homelabz.xyz'
+            smtpHost: 'smtp.gmail.com'
+            smtpPort: '587'
+            smtpSsl: 'true'
         enableCloudCommunication: false
         sharedStorageClassName: ceph-filesystem
         volume:
