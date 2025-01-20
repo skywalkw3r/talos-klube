@@ -12,19 +12,28 @@ spec:
     targetRevision: 2025.1.0
     helm:
       values: |
-        component.scim.enabled: false
-        general.domain: vault.lab.homelabz.xyz
-        general.ingress.enabled: true
-        general.ingress.className: nginx
-        general.ingress.cert.tls.name: tls-secret
-        general.ingress.cert.tls.clusterIssuer: letsencrypt-staging
-        general.email.replyToEmail: vault@homelabz.xyz
-        general.email.smtpHost: smtp.gmail.com
-        general.email.smtpPort: 587
-        general.email.smtpSsl: true
+        component:
+          scim:
+            enabled: false
+        general:
+          domain: vault.lab.homelabz.xyz
+          ingress:
+            enabled: true
+            className: nginx
+            cert:
+              tls:
+                name: tls-secret
+                clusterIssuer: letsencrypt-staging
+          email:
+            replyToEmail: vault@homelabz.xyz
+            smtpHost: smtp.gmail.com
+            smtpPort: 587
+            smtpSsl: true
         enableCloudCommunication: false
         sharedStorageClassName: ceph-filesystem
-        volume.logs.enabled: true
+        volume:
+          logs:
+            enabled: true
   destination:
     server: https://kubernetes.default.svc
     namespace: bitwarden
