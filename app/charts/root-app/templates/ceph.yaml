@@ -1,14 +1,14 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: metallb
+  name: rook-ceph
   finalizers:
   - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   source:
-    repoURL: https://metallb.github.io/metallb
-    chart: metallb
+    repoURL: https://charts.rook.io/release
+    chart: rook-ceph
     targetRevision: 0.14.9
     # helm:
     #   values: |
@@ -24,13 +24,8 @@ spec:
     #         - 5-dvs-servers
   destination:
     server: https://kubernetes.default.svc
-    namespace: metallb-system
+    namespace: rook-ceph
   syncPolicy:
-    managedNamespaceMetadata:
-      labels:
-        pod-security.kubernetes.io/enforce: privileged
-        pod-security.kubernetes.io/audit: privileged
-        pod-security.kubernetes.io/warn: privileged
     automated:
       prune: true
       selfHeal: true
