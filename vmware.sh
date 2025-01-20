@@ -42,28 +42,28 @@ create () {
     ## Create control plane nodes and edit their settings
     for i in $(seq 1 ${CONTROL_PLANE_COUNT}); do
         echo ""
-        echo "launching control plane node: ${CLUSTER_NAME}-control-plane-${i}"
+        echo "launching control plane node: ${CLUSTER_NAME}-m${i}"
         echo ""
 
-        govc library.deploy ${CLUSTER_NAME}/talos-${TALOS_VERSION} ${CLUSTER_NAME}-control-plane-${i}
+        govc library.deploy ${CLUSTER_NAME}/talos-${TALOS_VERSION} ${CLUSTER_NAME}-m${i}
 
         govc vm.change \
         -c ${CONTROL_PLANE_CPU}\
         -m ${CONTROL_PLANE_MEM} \
         -e "guestinfo.talos.config=${CONTROL_PLANE_B64_MACHINE_CONFIG}" \
         -e "disk.enableUUID=1" \
-        -vm ${CLUSTER_NAME}-control-plane-${i}
+        -vm ${CLUSTER_NAME}-m${i}
 
-        govc vm.disk.change -vm ${CLUSTER_NAME}-control-plane-${i} -disk.name disk-1000-0 -size ${CONTROL_PLANE_DISK}
+        govc vm.disk.change -vm ${CLUSTER_NAME}-m${i} -disk.name disk-1000-0 -size ${CONTROL_PLANE_DISK}
 
         if [ -z "${GOVC_NETWORK+x}" ]; then
              echo "GOVC_NETWORK is unset, assuming default VM Network";
         else
             echo "GOVC_NETWORK set to ${GOVC_NETWORK}";
-            govc vm.network.change -vm ${CLUSTER_NAME}-control-plane-${i} -net "${GOVC_NETWORK}" ethernet-0
+            govc vm.network.change -vm ${CLUSTER_NAME}-m${i} -net "${GOVC_NETWORK}" ethernet-0
         fi
 
-        govc vm.power -on ${CLUSTER_NAME}-control-plane-${i}
+        govc vm.power -on ${CLUSTER_NAME}-m${i}
     done
 
     ## Create worker nodes and edit their settings
@@ -99,18 +99,18 @@ create () {
 destroy() {
     for i in $(seq 1 ${CONTROL_PLANE_COUNT}); do
         echo ""
-        echo "destroying control plane node: ${CLUSTER_NAME}-control-plane-${i}"
+        echo "destroying control plane node: ${CLUSTER_NAME}-m${i}"
         echo ""
 
-        govc vm.destroy ${CLUSTER_NAME}-control-plane-${i}
+        govc vm.destroy ${CLUSTER_NAME}-m${i}
     done
 
-    for i in $(seq 1 ${WORKER_COUNT}); do
-        echo ""
-        echo "destroying worker node: ${CLUSTER_NAME}-worker-${i}"
-        echo ""
-        govc vm.destroy ${CLUSTER_NAME}-worker-${i}
-    done
+    # for i in $(seq 1 ${WORKER_COUNT}); do
+    #     echo ""
+    #     echo "destroying worker node: ${CLUSTER_NAME}-worker-${i}"
+    #     echo ""
+    #     govc vm.destroy ${CLUSTER_NAME}-worker-${i}
+    # done
 }
 
 delete_ova() {
