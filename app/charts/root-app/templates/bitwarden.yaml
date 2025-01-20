@@ -15,17 +15,12 @@ spec:
         component.scim.enabled: false
         general.domain: vault.lab.homelabz.xyz
         general.ingress.enabled: false
-        general.ingress.cert.tls.name: tls-secret
-        general.ingress.cert.tls.clusterIssuer: letsencrypt-staging
         general.email.replyToEmail: vault@homelabz.xyz
         general.email.smtpHost: smtp.gmail.com
         general.email.smtpPort: 587
         general.email.smtpSsl: true
         enableCloudCommunication: false
-        cloudRegion: US
         sharedStorageClassName: ceph-filesystem
-        secrets.secretName: custom-secret
-        database.enabled: true
         volume.logs.enabled: true
   destination:
     server: https://kubernetes.default.svc
