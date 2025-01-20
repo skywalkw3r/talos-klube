@@ -13,7 +13,9 @@ spec:
     helm:
       values: |
         general.domain: vault.lab.homelabz.xyz
-        general.ingress.enabled: false
+        general.ingress.enabled: true
+        general.ingress.cert.tls.name: tls-secret
+        general.ingress.cert.tls.clusterIssuer: letsencrypt-staging
         general.email.replyToEmail: vault@homelabz.xyz
         general.email.smtpHost: smtp.gmail.com
         general.email.smtpPort: 587
