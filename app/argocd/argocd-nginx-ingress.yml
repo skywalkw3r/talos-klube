@@ -1,0 +1,21 @@
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: argoco-server-ingress
+  namespace: argo-cd
+  annotations:
+    cert-manager.io/issuer: "letsencrypt-staging"
+    ingress.kubernetes.io/ingress.class: "nginx"
+spec:
+  rules:
+  - host: argocd.lab.homelabz.xyz
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: argo-cd-argocd-server
+            port:
+              number: 80
