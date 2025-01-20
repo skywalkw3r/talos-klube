@@ -8,7 +8,7 @@ spec:
   project: default
   source:
     repoURL: https://charts.bitwarden.com/
-    chart: bitwarden
+    chart: bitwarden/self-host
     targetRevision: 2025.1.0
   destination:
     server: https://kubernetes.default.svc
