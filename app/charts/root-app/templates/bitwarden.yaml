@@ -22,7 +22,7 @@ spec:
         general.email.smtpSsl: true
         enableCloudCommunication: false
         sharedStorageClassName: ceph-block
-        secrets.secretName: vault-secrets
+        secrets.secretName: custom-secret
         database.enabled: true
         volume.logs.enabled: true
   destination:
