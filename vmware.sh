@@ -58,7 +58,7 @@ create () {
         govc vm.disk.change -vm ${CLUSTER_NAME}-m${i} -disk.name disk-1000-0 -size ${CONTROL_PLANE_DISK}
 
         # Add additional thin provisioned disk
-        govc vm.disk.create -vm ${CLUSTER_NAME}-m${i} -size ${CONTROL_PLANE_ADDITIONAL_DISK}
+        govc vm.disk.create -vm ${CLUSTER_NAME}-m${i} -disk.name data-disk -size ${CONTROL_PLANE_ADDITIONAL_DISK}
 
         if [ -z "${GOVC_NETWORK+x}" ]; then
              echo "GOVC_NETWORK is unset, assuming default VM Network";
@@ -70,7 +70,33 @@ create () {
         govc vm.power -on ${CLUSTER_NAME}-m${i}
     done
 
-    # ... (Worker node creation remains commented out as in the original script)
+    ## Create worker nodes and edit their settings
+    # for i in $(seq 1 ${WORKER_COUNT}); do
+    #     echo ""
+    #     echo "launching worker node: ${CLUSTER_NAME}-worker-${i}"
+    #     echo ""
+
+    #     govc library.deploy ${CLUSTER_NAME}/talos-${TALOS_VERSION} ${CLUSTER_NAME}-worker-${i}
+
+    #     govc vm.change \
+    #     -c ${WORKER_CPU}\
+    #     -m ${WORKER_MEM} \
+    #     -e "guestinfo.talos.config=${WORKER_B64_MACHINE_CONFIG}" \
+    #     -e "disk.enableUUID=1" \
+    #     -vm ${CLUSTER_NAME}-worker-${i}
+
+    #     govc vm.disk.change -vm ${CLUSTER_NAME}-worker-${i} -disk.name disk-1000-0 -size ${WORKER_DISK}
+
+    #     if [ -z "${GOVC_NETWORK+x}" ]; then
+    #          echo "GOVC_NETWORK is unset, assuming default VM Network";
+    #     else
+    #         echo "GOVC_NETWORK set to ${GOVC_NETWORK}";
+    #         govc vm.network.change -vm ${CLUSTER_NAME}-worker-${i} -net "${GOVC_NETWORK}" ethernet-0
+    #     fi
+
+
+    #     govc vm.power -on ${CLUSTER_NAME}-worker-${i}
+    # done
 }
 
 destroy() {
@@ -82,7 +108,12 @@ destroy() {
         govc vm.destroy ${CLUSTER_NAME}-m${i}
     done
 
-    # ... (Worker node destruction remains commented out)
+    # for i in $(seq 1 ${WORKER_COUNT}); do
+    #     echo ""
+    #     echo "destroying worker node: ${CLUSTER_NAME}-worker-${i}"
+    #     echo ""
+    #     govc vm.destroy ${CLUSTER_NAME}-worker-${i}
+    # done
 }
 
 delete_ova() {
