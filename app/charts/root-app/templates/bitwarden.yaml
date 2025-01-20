@@ -12,8 +12,9 @@ spec:
     targetRevision: 2025.1.0
     helm:
       values: |
+        component.scim.enabled: false
         general.domain: vault.lab.homelabz.xyz
-        general.ingress.enabled: true
+        general.ingress.enabled: false
         general.ingress.cert.tls.name: tls-secret
         general.ingress.cert.tls.clusterIssuer: letsencrypt-staging
         general.email.replyToEmail: vault@homelabz.xyz
@@ -21,6 +22,7 @@ spec:
         general.email.smtpPort: 587
         general.email.smtpSsl: true
         enableCloudCommunication: false
+        cloudRegion: US
         sharedStorageClassName: ceph-block
         secrets.secretName: custom-secret
         database.enabled: true
