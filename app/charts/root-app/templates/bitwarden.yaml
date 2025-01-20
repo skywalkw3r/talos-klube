@@ -15,6 +15,7 @@ spec:
         component.scim.enabled: false
         general.domain: vault.lab.homelabz.xyz
         general.ingress.enabled: true
+        general.ingress.className: nginx
         general.email.replyToEmail: vault@homelabz.xyz
         general.email.smtpHost: smtp.gmail.com
         general.email.smtpPort: 587
