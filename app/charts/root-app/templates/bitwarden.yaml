@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: bitwarden
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://charts.bitwarden.com/
+    chart: bitwarden
+    targetRevision: 2025.1.0
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: bitwarden
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
