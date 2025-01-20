@@ -23,7 +23,7 @@ spec:
         general.email.smtpSsl: true
         enableCloudCommunication: false
         cloudRegion: US
-        sharedStorageClassName: ceph-block
+        sharedStorageClassName: ceph-filesystem
         secrets.secretName: custom-secret
         database.enabled: true
         volume.logs.enabled: true
