@@ -12,8 +12,7 @@ spec:
     targetRevision: 4.12.0
     helm:
       values: |
-        crds:
-          controller.admissionWebhooks.certManager.enabled: true
+        controller.admissionWebhooks.certManager.enabled: true
   destination:
     server: https://kubernetes.default.svc
     namespace: ingress-nginx
