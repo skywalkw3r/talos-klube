@@ -15,4 +15,7 @@ spec:
     namespace: argo-cd
   syncPolicy:
     automated:
+      prune: false
       selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
