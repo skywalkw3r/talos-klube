@@ -12,14 +12,18 @@ spec:
     targetRevision: 2025.1.0
     helm:
       values: |
+      database:
+        image:
+          name: mcr.microsoft.com/mssql/rhel/server
+          tag: 2022-CU17-rhel-9.1
         component:
           scim:
             enabled: false
         general:
-          domain: vault.lab.homelabz.xyz
+          domain: 'vault.lab.homelabz.xyz'
           ingress:
             enabled: true
-            className: nginx
+            className: 'nginx'
             cert:
               tls:
                 name: tls-secret
