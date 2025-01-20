@@ -16,6 +16,8 @@ spec:
         general.domain: vault.lab.homelabz.xyz
         general.ingress.enabled: true
         general.ingress.className: nginx
+        general.ingress.cert.tls.name: tls-secret
+        general.ingress.cert.tls.clusterIssuer: letsencrypt-staging
         general.email.replyToEmail: vault@homelabz.xyz
         general.email.smtpHost: smtp.gmail.com
         general.email.smtpPort: 587
