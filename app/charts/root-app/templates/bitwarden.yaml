@@ -10,6 +10,19 @@ spec:
     repoURL: https://charts.bitwarden.com/
     chart: self-host
     targetRevision: 2025.1.0
+    helm:
+      values: |
+        general.domain: vault.lab.homelabz.xyz
+        general.ingress.enabled: false # need to install nginx
+        general.email.replyToEmail: vault@homelabz.xyz
+        general.email.smtpHost: smtp.gmail.com
+        general.email.smtpPort: 587
+        general.email.smtpSsl: true
+        enableCloudCommunication: false
+        sharedStorageClassName: ceph-block
+        secrets.secretName: vault-secrets
+        database.enabled: true
+        volume.logs.enabled: true
   destination:
     server: https://kubernetes.default.svc
     namespace: bitwarden
