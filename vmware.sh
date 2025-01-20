@@ -46,8 +46,10 @@ create () {
         echo "launching control plane node: ${CLUSTER_NAME}-m${i}"
         echo ""
 
+        # create master node VM from template
         govc library.deploy ${CLUSTER_NAME}/talos-${TALOS_VERSION} ${CLUSTER_NAME}-m${i}
 
+        # update vm specs
         govc vm.change \
         -c ${CONTROL_PLANE_CPU}\
         -m ${CONTROL_PLANE_MEM} \
@@ -55,10 +57,11 @@ create () {
         -e "disk.enableUUID=1" \
         -vm ${CLUSTER_NAME}-m${i}
 
+        # update existing os disk to specfied size
         govc vm.disk.change -vm ${CLUSTER_NAME}-m${i} -disk.name disk-1000-0 -size ${CONTROL_PLANE_DISK}
 
-        # Add additional thin provisioned disk
-        govc vm.disk.create -vm ${CLUSTER_NAME}-m${i} -disk.name data-disk -size ${CONTROL_PLANE_ADDITIONAL_DISK}
+        # add additional thin provisioned disk
+        govc vm.disk.create -vm ${CLUSTER_NAME}-m${i} -name ${CLUSTER_NAME}-m${i}/data-disk -size ${CONTROL_PLANE_ADDITIONAL_DISK}
 
         if [ -z "${GOVC_NETWORK+x}" ]; then
              echo "GOVC_NETWORK is unset, assuming default VM Network";
@@ -67,6 +70,7 @@ create () {
             govc vm.network.change -vm ${CLUSTER_NAME}-m${i} -net "${GOVC_NETWORK}" ethernet-0
         fi
 
+        # power on vm
         govc vm.power -on ${CLUSTER_NAME}-m${i}
     done
 
