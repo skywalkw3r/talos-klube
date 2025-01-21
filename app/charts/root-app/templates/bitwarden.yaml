@@ -44,14 +44,14 @@ spec:
     syncOptions:
     - CreateNamespace=true
   patchesStrategicMerge:
-  - kind: StatefulSet
-    name: bitwarden-self-host-mssql  # Replace with the actual statefulset name (might be bitwarden-mysql)
-    namespace: bitwarden
-    patch: |-
-      spec:
-        template:
-          spec:
-            securityContext:
-              fsGroup: 10001
-              runAsUser: 10001
-              runAsNonRoot: true
+    - kind: StatefulSet
+      name: bitwarden-self-host-mssql
+      namespace: bitwarden
+      patch: |-
+        spec:
+          template:
+            spec:
+              securityContext:
+                fsGroup: 10001
+                runAsUser: 10001
+                runAsNonRoot: true
