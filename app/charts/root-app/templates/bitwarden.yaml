@@ -55,3 +55,69 @@ spec:
                 fsGroup: 10001
                 runAsUser: 10001
                 runAsNonRoot: true
+    - kind: Deployment
+      name: bitwarden-self-host-admin
+      namespace: bitwarden
+      patch: |-
+        spec:
+          template:
+            spec:
+              securityContext:
+                fsGroup: 10001
+                runAsUser: 10001
+                runAsNonRoot: true
+    - kind: Deployment
+      name: bitwarden-self-host-events
+      namespace: bitwarden
+      patch: |-
+        spec:
+          template:
+            spec:
+              securityContext:
+                fsGroup: 10001
+                runAsUser: 10001
+                runAsNonRoot: true
+    - kind: Deployment
+      name: bitwarden-self-host-icons
+      namespace: bitwarden
+      patch: |-
+        spec:
+          template:
+            spec:
+              securityContext:
+                fsGroup: 10001
+                runAsUser: 10001
+                runAsNonRoot: true
+    - kind: Deployment
+      name: bitwarden-self-host-identity
+      namespace: bitwarden
+      patch: |-
+        spec:
+          template:
+            spec:
+              securityContext:
+                fsGroup: 10001
+                runAsUser: 10001
+                runAsNonRoot: true
+    - kind: Deployment
+      name: bitwarden-self-host-sso
+      namespace: bitwarden
+      patch: |-
+        spec:
+          template:
+            spec:
+              securityContext:
+                fsGroup: 10001
+                runAsUser: 10001
+                runAsNonRoot: true
+    - kind: Deployment
+      name: bitwarden-self-host-notifications
+      namespace: bitwarden
+      patch: |-
+        spec:
+          template:
+            spec:
+              securityContext:
+                fsGroup: 10001
+                runAsUser: 10001
+                runAsNonRoot: true
