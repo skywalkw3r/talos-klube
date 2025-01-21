@@ -1,0 +1,130 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: debug-pod
+  namespace: bitwarden
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: debug
+  template:
+    metadata:
+      labels:
+        app: debug
+    spec:
+      containers:
+      - name: debug-container
+        securityContext:
+          runAsUser: 0
+        command: ["/bin/sh", "-c", "sleep infinity"]
+        envFrom:
+          - configMapRef:
+              name: bitwarden-config-map
+          - secretRef:
+              name: custom-secret
+          - secretRef:
+              name: bitwarden-sql-connection-string
+        image: mcr.microsoft.com/mssql/rhel/server:2022-CU17-rhel-9.1
+        imagePullPolicy: Always
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          successThreshold: 1
+          tcpSocket:
+            port: mssql
+          timeoutSeconds: 5
+        ports:
+          - containerPort: 1433
+            name: mssql
+            protocol: TCP
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 5
+          periodSeconds: 2
+          successThreshold: 1
+          tcpSocket:
+            port: mssql
+          timeoutSeconds: 1
+        resources:
+          limits:
+            cpu: 500m
+            memory: 2G
+          requests:
+            cpu: 100m
+            memory: 2G
+        startupProbe:
+          exec:
+            command:
+              - /bin/sh
+              - '-c'
+              - >-
+                /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P ${SA_PASSWORD}
+                -Q "SELECT 1" || exit 1
+          failureThreshold: 3
+          initialDelaySeconds: 120
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 3
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+        volumeMounts:
+          - mountPath: /var/opt/mssql/data
+            name: mssql-data
+          - mountPath: /var/opt/mssql/log
+            name: mssql-log
+          - mountPath: /var/opt/mssql/backups
+            name: mssql-backups
+          - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+            name: kube-api-access-s5mbk
+            readOnly: true
+      dnsPolicy: ClusterFirst
+      enableServiceLinks: false
+      hostname: bitwarden-self-host-mssql-0
+      preemptionPolicy: PreemptLowerPriority
+      priority: 0
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: default
+      serviceAccountName: default
+      subdomain: bitwarden-self-host-mssql
+      terminationGracePeriodSeconds: 30
+      tolerations:
+        - effect: NoExecute
+          key: node.kubernetes.io/not-ready
+          operator: Exists
+          tolerationSeconds: 300
+        - effect: NoExecute
+          key: node.kubernetes.io/unreachable
+          operator: Exists
+          tolerationSeconds: 300
+      volumes:
+      - name: mssql-data
+        persistentVolumeClaim:
+          claimName: bitwarden-self-host-mssqldata
+      - name: mssql-log
+        persistentVolumeClaim:
+          claimName: bitwarden-self-host-mssqllog
+      - name: mssql-backups
+        persistentVolumeClaim:
+          claimName: bitwarden-self-host-mssqlbackups
+      - name: kube-api-access-s5mbk
+        projected:
+          defaultMode: 420
+          sources:
+            - serviceAccountToken:
+                expirationSeconds: 3607
+                path: token
+            - configMap:
+                items:
+                  - key: ca.crt
+                    path: ca.crt
+                name: kube-root-ca.crt
+            - downwardAPI:
+                items:
+                  - fieldRef:
+                      apiVersion: v1
+                      fieldPath: metadata.namespace
+                    path: namespace
