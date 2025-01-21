@@ -12,10 +12,6 @@ spec:
     targetRevision: 2025.1.0
     helm:
       values: |
-        # database:
-        #   image:
-        #     name: mcr.microsoft.com/mssql/rhel/server
-        #     tag: 2022-CU17-rhel-9.1
         component:
           scim:
             enabled: false
@@ -47,3 +43,15 @@ spec:
       selfHeal: true
     syncOptions:
     - CreateNamespace=true
+  patchesStrategicMerge:
+  - kind: StatefulSet
+    name: bitwarden-self-host-mssql  # Replace with the actual statefulset name (might be bitwarden-mysql)
+    namespace: bitwarden
+    patch: |-
+      spec:
+        template:
+          spec:
+            securityContext:
+              fsGroup: 10001
+              runAsUser: 10001
+              runAsNonRoot: true
