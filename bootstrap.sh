@@ -42,9 +42,12 @@ kubectl apply --server-side -f \
 
 echo "==> [6/8] installing Cilium (Argo CD adopts this release later)"
 helm dependency update "${REPO_DIR}/app/charts/cilium" >/dev/null
+# Offline `helm template` has no cluster capabilities, and the Cilium
+# chart gates its GatewayClass on them — declare Gateway API explicitly.
+HELM_CAPS="--api-versions gateway.networking.k8s.io/v1 --api-versions gateway.networking.k8s.io/v1/GatewayClass"
 # First pass: CiliumLoadBalancerIPPool/L2AnnouncementPolicy fail until the
 # Cilium CRDs register — expected; re-applied strictly after rollout.
-helm template cilium "${REPO_DIR}/app/charts/cilium" -n kube-system \
+helm template cilium "${REPO_DIR}/app/charts/cilium" -n kube-system ${HELM_CAPS} \
     | kubectl apply --server-side -f - || echo "    (partial apply expected on first pass)"
 kubectl -n kube-system rollout status ds/cilium --timeout=10m
 # the operator registers Cilium CRDs after the agents come up — wait for
@@ -55,7 +58,7 @@ for crd in ciliuml2announcementpolicies.cilium.io ciliumloadbalancerippools.cili
     done
     kubectl wait --for=condition=established "crd/${crd}" --timeout=120s
 done
-helm template cilium "${REPO_DIR}/app/charts/cilium" -n kube-system \
+helm template cilium "${REPO_DIR}/app/charts/cilium" -n kube-system ${HELM_CAPS} \
     | kubectl apply --server-side -f -
 
 # LB pool comes from env, not git — keeps site addressing out of the repo
