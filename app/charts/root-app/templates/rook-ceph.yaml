@@ -1,3 +1,4 @@
+{{- if .Values.apps.rookCeph }}
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -9,7 +10,7 @@ spec:
   source:
     repoURL: https://charts.rook.io/release
     chart: rook-ceph
-    targetRevision: 1.16.2
+    targetRevision: {{ .Values.versions.rookCeph }}
   destination:
     server: https://kubernetes.default.svc
     namespace: rook-ceph
@@ -22,3 +23,4 @@ spec:
       selfHeal: true
     syncOptions:
     - CreateNamespace=true
+{{- end }}

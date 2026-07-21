@@ -5,10 +5,10 @@ metadata:
 spec:
   acme:
     server: https://acme-v02.api.letsencrypt.org/directory
-    email: lw123@protonmail.com
+    email: example@example.com
     privateKeySecretRef:
-      name: tls-secret
+      name: letsencrypt-production-account-key
     solvers:
       - http01:
           ingress:
-            class: nginx #use "azure/application-gateway" for Application Gateway ingress
+            class: nginx

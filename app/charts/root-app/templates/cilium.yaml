@@ -1,21 +1,23 @@
+{{- if .Values.apps.cilium }}
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: argo-cd
+  name: cilium
   finalizers:
   - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   source:
     repoURL: https://github.com/skywalkw3r/talos-klube.git
-    path: app/charts/argo-cd
+    path: app/charts/cilium
     targetRevision: main
   destination:
     server: https://kubernetes.default.svc
-    namespace: argo-cd
+    namespace: kube-system
   syncPolicy:
     automated:
-      prune: false
+      prune: false        # never auto-prune the CNI
       selfHeal: true
     syncOptions:
-    - CreateNamespace=true
+    - ServerSideApply=true
+{{- end }}

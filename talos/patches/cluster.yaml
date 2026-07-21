@@ -1,0 +1,29 @@
+# Cluster-wide machine config patch — safe to commit (no secrets).
+# Applied by talos/gen-config.sh on top of `talosctl gen config` output.
+cluster:
+  network:
+    cni:
+      name: none        # Cilium is installed by bootstrap.sh / Argo CD
+  proxy:
+    disabled: true      # kube-proxy replaced by Cilium eBPF
+  allowSchedulingOnControlPlanes: true
+machine:
+  features:
+    hostDNS:
+      enabled: true
+      # Must be false with Cilium bpf.masquerade — the host-forwarded
+      # kube-dns path breaks under eBPF masquerading.
+      forwardKubeDNSToHost: false
+  # Encrypt STATE and EPHEMERAL partitions at rest (keyed to node identity;
+  # no TPM required). Protects against disk/backup theft on the PVE host.
+  systemDiskEncryption:
+    state:
+      provider: luks2
+      keys:
+        - nodeID: {}
+          slot: 0
+    ephemeral:
+      provider: luks2
+      keys:
+        - nodeID: {}
+          slot: 0

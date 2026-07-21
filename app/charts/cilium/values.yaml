@@ -1,0 +1,106 @@
+# Wrapper-chart values. `lbPools`/`l2` drive templates/lb-ipam.yaml;
+# everything under `cilium:` is passed to the upstream chart.
+#
+# lbPools is EMPTY in git deliberately: deployment IP ranges are applied
+# at bootstrap from talos/env (LB_START/LB_STOP) so site addressing never
+# lands in this public repo. Populate it only for ranges safe to publish.
+lbPools: []
+l2:
+  enabled: true
+
+cilium:
+  ipam:
+    mode: kubernetes
+
+  # kube-proxy-free, talking to the apiserver via Talos KubePrism
+  kubeProxyReplacement: true
+  k8sServiceHost: localhost
+  k8sServicePort: 7445
+
+  # Talos-required settings (docs.siderolabs.com deploying-cilium)
+  cgroup:
+    autoMount:
+      enabled: false
+    hostRoot: /sys/fs/cgroup
+  securityContext:
+    capabilities:
+      ciliumAgent:
+        - CHOWN
+        - KILL
+        - NET_ADMIN
+        - NET_RAW
+        - IPC_LOCK
+        - SYS_ADMIN
+        - SYS_RESOURCE
+        - DAC_OVERRIDE
+        - FOWNER
+        - SETGID
+        - SETUID
+      cleanCiliumState:
+        - NET_ADMIN
+        - SYS_ADMIN
+        - SYS_RESOURCE
+
+  # eBPF masquerading (requires hostDNS.forwardKubeDNSToHost=false in
+  # the Talos machine config — set in talos/patches/cluster.yaml)
+  bpf:
+    masquerade: true
+
+  # WireGuard transparent encryption, pod-to-pod and node-to-node
+  encryption:
+    enabled: true
+    type: wireguard
+    nodeEncryption: true
+
+  # LoadBalancer services without MetalLB: LB-IPAM + L2 (ARP) announcements
+  l2announcements:
+    enabled: true
+  externalIPs:
+    enabled: true
+  # l2announcements leases add apiserver traffic; bump client rate limits
+  k8sClientRateLimit:
+    qps: 20
+    burst: 100
+
+  # Ingress replacement: Gateway API (CRDs installed by bootstrap.sh /
+  # the gateway-api Argo app before Cilium starts)
+  gatewayAPI:
+    enabled: true
+    enableAlpn: true
+
+  # Hubble observability. TLS via cronJob keeps generated CAs out of
+  # rendered manifests (the old cilium-cni.yaml leaked one) and avoids
+  # cert churn on every Argo sync.
+  hubble:
+    enabled: true
+    relay:
+      enabled: true
+    ui:
+      enabled: true
+    metrics:
+      enabled:
+        - dns
+        - drop
+        - tcp
+        - flow
+        - icmp
+        - httpV2
+    tls:
+      auto:
+        enabled: true
+        method: cronJob
+        schedule: "0 0 1 */4 *"
+
+  # Metrics endpoints on now; flip serviceMonitor.enabled to true after
+  # kube-prometheus-stack is synced (its CRDs must exist first).
+  prometheus:
+    enabled: true
+    serviceMonitor:
+      enabled: false
+  operator:
+    rollOutPods: true
+    prometheus:
+      enabled: true
+      serviceMonitor:
+        enabled: false
+  rollOutCiliumPods: true

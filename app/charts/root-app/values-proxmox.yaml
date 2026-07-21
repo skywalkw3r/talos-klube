@@ -1,0 +1,19 @@
+# Proxmox cluster overlay — the modern stack.
+# Cilium replaces kube-proxy, MetalLB, and the retired ingress-nginx;
+# kube-prometheus-stack replaces the bare prometheus chart.
+# Applied on top of values.yaml by app/bootstrap/root-app-proxmox.yaml.
+selfValueFiles:
+  - values-proxmox.yaml
+
+apps:
+  bitwarden: false          # needs SMTP + storage decisions; enable later
+  cilium: true
+  dashboard: false          # Argo CD UI + Hubble UI cover this; Headlamp is the modern option if wanted
+  gatewayApiCrds: true
+  ingressNginx: false       # retired upstream (March 2026) — Cilium Gateway API instead
+  kubePrometheusStack: true
+  prometheus: false
+
+versions:
+  certManager: v1.21.0
+  rookCeph: v1.20.2

@@ -1,21 +1,25 @@
+# Bootstrap Application for the PROXMOX cluster (applied once by
+# bootstrap.sh). Selects the values-proxmox.yaml overlay; the rendered
+# root-app template then self-manages with the same overlay.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: argo-cd
+  name: root-app
+  namespace: argo-cd
   finalizers:
   - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   source:
     repoURL: https://github.com/skywalkw3r/talos-klube.git
-    path: app/charts/argo-cd
+    path: app/charts/root-app
     targetRevision: main
+    helm:
+      valueFiles:
+      - values-proxmox.yaml
   destination:
     server: https://kubernetes.default.svc
     namespace: argo-cd
   syncPolicy:
     automated:
-      prune: false
       selfHeal: true
-    syncOptions:
-    - CreateNamespace=true

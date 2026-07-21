@@ -1,0 +1,25 @@
+{{- range .Values.lbPools }}
+---
+apiVersion: cilium.io/v2
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: {{ .name }}
+spec:
+  blocks:
+    {{- if .cidr }}
+    - cidr: {{ .cidr }}
+    {{- else }}
+    - start: {{ .start }}
+      stop: {{ .stop }}
+    {{- end }}
+{{- end }}
+{{- if .Values.l2.enabled }}
+---
+apiVersion: cilium.io/v2alpha1
+kind: CiliumL2AnnouncementPolicy
+metadata:
+  name: default-l2
+spec:
+  externalIPs: true
+  loadBalancerIPs: true
+{{- end }}

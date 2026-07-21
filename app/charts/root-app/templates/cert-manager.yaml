@@ -1,3 +1,4 @@
+{{- if .Values.apps.certManager }}
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -9,7 +10,7 @@ spec:
   source:
     repoURL: https://charts.jetstack.io
     chart: cert-manager
-    targetRevision: 1.16.3
+    targetRevision: {{ .Values.versions.certManager }}
     helm:
       values: |
         crds:
@@ -23,3 +24,4 @@ spec:
       selfHeal: true
     syncOptions:
     - CreateNamespace=true
+{{- end }}

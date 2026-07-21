@@ -11,7 +11,8 @@ kubeconfig
 talosconfig
 talosctl
 
-bootstrap/
+# legacy local scratch dir (root-anchored — app/bootstrap/ IS tracked)
+/bootstrap/
 
 # Talos machine configs and generated secrets — never commit these in plaintext
 controlplane.yaml
@@ -23,6 +24,8 @@ talsecret*.yaml
 *secrets*.yaml
 _out/
 clusterconfig/
+talos/env
+talos/.schematic-id
 
 # SOPS / age key material — the age private key must never be committed
 age.key

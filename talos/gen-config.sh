@@ -1,0 +1,105 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+## Generate Talos machine configs for the Proxmox cluster.
+## Secrets land in talos/secrets.yaml and rendered configs in
+## talos/clusterconfig/ — BOTH ARE GITIGNORED. Never commit them.
+##
+## Required environment:
+#   export NODE_IPS='10.5.6.11,10.5.6.12,10.5.6.13'  # one per control plane node
+#   export VIP='10.5.6.10'                           # shared control plane VIP
+#   export GATEWAY='10.5.6.1'
+##
+## Optional environment (defaults shown):
+#   export CLUSTER_NAME=klube-pmx
+#   export TALOS_VERSION=v1.13.6
+#   export PREFIX=24
+#   export DNS_SERVERS='1.1.1.1,9.9.9.9'
+#   export INSTALL_DISK=/dev/sda
+
+CLUSTER_NAME=${CLUSTER_NAME:=klube-pmx}
+TALOS_VERSION=${TALOS_VERSION:=v1.13.6}
+PREFIX=${PREFIX:=24}
+DNS_SERVERS=${DNS_SERVERS:=1.1.1.1,9.9.9.9}
+INSTALL_DISK=${INSTALL_DISK:=/dev/sda}
+
+: "${NODE_IPS:?set NODE_IPS, e.g. 10.5.6.11,10.5.6.12,10.5.6.13}"
+: "${VIP:?set VIP, e.g. 10.5.6.10}"
+: "${GATEWAY:?set GATEWAY, e.g. 10.5.6.1}"
+
+TALOS_DIR=$(cd "$(dirname "$0")" && pwd)
+OUT="${TALOS_DIR}/clusterconfig"
+SECRETS="${TALOS_DIR}/secrets.yaml"
+SCHEMATIC_FILE="${TALOS_DIR}/.schematic-id"
+mkdir -p "${OUT}"
+
+## Same deterministic schematic as proxmox.sh (qemu-guest-agent extension)
+if [ -f "${SCHEMATIC_FILE}" ]; then
+    SCHEMATIC_ID=$(cat "${SCHEMATIC_FILE}")
+else
+    SCHEMATIC_ID=$(curl -fsS -X POST https://factory.talos.dev/schematics --data-binary @- <<'EOF' | sed -E 's/.*"id":"([a-f0-9]+)".*/\1/'
+customization:
+  systemExtensions:
+    officialExtensions:
+      - siderolabs/qemu-guest-agent
+EOF
+    )
+    echo "${SCHEMATIC_ID}" > "${SCHEMATIC_FILE}"
+fi
+
+## Cluster secrets: generated once, never committed. This is what leaked
+## in the old controlplane.yaml — keep it out of git forever.
+if [ ! -f "${SECRETS}" ]; then
+    talosctl gen secrets --output-file "${SECRETS}"
+    echo "generated new cluster secrets at ${SECRETS} (gitignored)"
+fi
+
+talosctl gen config "${CLUSTER_NAME}" "https://${VIP}:6443" \
+    --with-secrets "${SECRETS}" \
+    --install-disk "${INSTALL_DISK}" \
+    --install-image "factory.talos.dev/installer/${SCHEMATIC_ID}:${TALOS_VERSION}" \
+    --config-patch @"${TALOS_DIR}/patches/cluster.yaml" \
+    --with-docs=false --with-examples=false \
+    --output-types controlplane,talosconfig \
+    --output "${OUT}/" --force
+
+## Per-node configs: static IP + VIP on the physical NIC
+dns_yaml=""
+IFS=',' read -ra DNS <<< "${DNS_SERVERS}"
+for d in "${DNS[@]}"; do dns_yaml="${dns_yaml}
+      - ${d}"; done
+
+IFS=',' read -ra IPS <<< "${NODE_IPS}"
+i=0
+for ip in "${IPS[@]}"; do
+    i=$((i + 1))
+    name="${CLUSTER_NAME}-m${i}"
+    cat > "${OUT}/patch-${name}.yaml" <<EOF
+machine:
+  network:
+    hostname: ${name}
+    nameservers:${dns_yaml}
+    interfaces:
+      - deviceSelector:
+          physical: true
+        dhcp: false
+        addresses:
+          - ${ip}/${PREFIX}
+        routes:
+          - network: 0.0.0.0/0
+            gateway: ${GATEWAY}
+        vip:
+          ip: ${VIP}
+EOF
+    talosctl machineconfig patch "${OUT}/controlplane.yaml" \
+        --patch @"${OUT}/patch-${name}.yaml" \
+        --output "${OUT}/${name}.yaml"
+    echo "rendered ${OUT}/${name}.yaml (${ip})"
+done
+
+## talosctl client config: talk to node IPs directly (never the VIP —
+## the VIP depends on etcd, which is down exactly when you need talosctl)
+talosctl --talosconfig "${OUT}/talosconfig" config endpoint "${IPS[@]}"
+talosctl --talosconfig "${OUT}/talosconfig" config node "${IPS[0]}"
+echo ""
+echo "done. export TALOSCONFIG=${OUT}/talosconfig"

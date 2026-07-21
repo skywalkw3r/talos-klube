@@ -1,3 +1,7 @@
+{{- if .Values.apps.ingressNginx }}
+# NOTE: ingress-nginx is retired upstream (no fixes after March 2026).
+# 4.12.1 is the IngressNightmare (CVE-2025-1974) patch release; new
+# clusters should use Cilium Gateway API instead (apps.cilium).
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
@@ -9,7 +13,7 @@ spec:
   source:
     repoURL: https://kubernetes.github.io/ingress-nginx
     chart: ingress-nginx
-    targetRevision: 4.12.0
+    targetRevision: 4.12.1
     helm:
       values: |
         controller:
@@ -25,3 +29,4 @@ spec:
       selfHeal: true
     syncOptions:
     - CreateNamespace=true
+{{- end }}
