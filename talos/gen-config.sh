@@ -95,7 +95,13 @@ machine:
 EOF
     talosctl machineconfig patch "${OUT}/controlplane.yaml" \
         --patch @"${OUT}/patch-${name}.yaml" \
-        --output "${OUT}/${name}.yaml"
+        --output "${OUT}/${name}.tmp.yaml"
+    # Hostname lives in the HostnameConfig document (Talos >=1.12), which
+    # gen config emits as `auto: stable` (random name). Setting it via
+    # machine.network.hostname instead is rejected ("static hostname is
+    # already set"), and auto+hostname can't coexist — so swap the field.
+    sed "s/^auto: stable$/hostname: ${name}/" "${OUT}/${name}.tmp.yaml" > "${OUT}/${name}.yaml"
+    rm -f "${OUT}/${name}.tmp.yaml"
     echo "rendered ${OUT}/${name}.yaml (${ip})"
 done
 

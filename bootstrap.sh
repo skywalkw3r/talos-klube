@@ -47,7 +47,14 @@ helm dependency update "${REPO_DIR}/app/charts/cilium" >/dev/null
 helm template cilium "${REPO_DIR}/app/charts/cilium" -n kube-system \
     | kubectl apply --server-side -f - || echo "    (partial apply expected on first pass)"
 kubectl -n kube-system rollout status ds/cilium --timeout=10m
-sleep 10
+# the operator registers Cilium CRDs after the agents come up — wait for
+# the ones the strict re-apply and LB pool need
+for crd in ciliuml2announcementpolicies.cilium.io ciliumloadbalancerippools.cilium.io; do
+    until kubectl get crd "${crd}" >/dev/null 2>&1; do
+        echo "    waiting for CRD ${crd}..."; sleep 5
+    done
+    kubectl wait --for=condition=established "crd/${crd}" --timeout=120s
+done
 helm template cilium "${REPO_DIR}/app/charts/cilium" -n kube-system \
     | kubectl apply --server-side -f -
 
