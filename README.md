@@ -33,7 +33,9 @@ The full path from `bootstrap.sh` to serving traffic — Secure Boot chain,
 cluster bring-up, GitOps handoff, and the runtime request path — is
 diagrammed in [docs/deployment-flow.mmd](docs/deployment-flow.mmd)
 (Mermaid: renders in VS Code/JetBrains, [mermaid.live](https://mermaid.live),
-or `mmdc`).
+or `mmdc`). Day-to-day commands (talosctl, kubectl, Cilium/Argo/Rook, and
+an `oc` translation table) live in
+[docs/cli-cheatsheet.md](docs/cli-cheatsheet.md).
 
 ## Repo layout
 
