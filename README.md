@@ -4,14 +4,13 @@ Homelab Kubernetes on [Talos Linux](https://www.talos.dev), managed by an
 [Argo CD](https://argo-cd.readthedocs.io) app-of-apps. Exploring how far a
 fully free stack can go as an OpenShift (OCP) replacement.
 
-Two deployment targets share one GitOps tree:
+Target platform: **Proxmox VE**, provisioned by `proxmox.sh`, with
+**Cilium for everything** — CNI, kube-proxy replacement, WireGuard
+encryption, LB-IPAM + L2 announcements, Gateway API, Hubble. (The
+original vSphere/flannel/MetalLB/ingress-nginx generation is retired;
+its scripts live on in git history.)
 
-| Cluster | Platform | Networking | Status |
-|---|---|---|---|
-| `klube-pmx` | Proxmox VE (`proxmox.sh`) | **Cilium for everything** — CNI, kube-proxy replacement, WireGuard encryption, LB-IPAM + L2 announcements, Gateway API, Hubble | current |
-| `klube` | vSphere (`vmware.sh`) | flannel + MetalLB + ingress-nginx | legacy |
-
-## The Proxmox stack
+## The stack
 
 - **Talos v1.13.6** — immutable, API-only OS; no SSH, no shell. Machine
   configs delivered via cloud-init (nocloud); STATE/EPHEMERAL partitions
@@ -41,7 +40,6 @@ an `oc` translation table) live in
 
 ```
 proxmox.sh                  # provision Talos VMs on Proxmox (qm over SSH)
-vmware.sh                   # legacy vSphere provisioning (govc)
 bootstrap.sh                # end-to-end: configs -> VMs -> Cilium -> Argo CD
 talos/
   patches/cluster.yaml      # committed machine-config patch (no secrets)
@@ -103,8 +101,8 @@ Teardown: `./proxmox.sh destroy`
 - **Upgrades:** Renovate proposes chart/Talos bumps; `talosctl upgrade`
   one minor at a time for the OS.
 - App toggles and chart versions live in
-  [values.yaml](app/charts/root-app/values.yaml) (defaults = legacy vSphere
-  behavior) and the per-cluster overlay files.
+  [values.yaml](app/charts/root-app/values.yaml); per-cluster overlay
+  files (e.g. `values-proxmox.yaml`) carry any divergence.
 
 ## TODO (OCP-parity backlog)
 
@@ -113,10 +111,3 @@ Teardown: `./proxmox.sh destroy`
 - talhelper + SOPS/age for encrypted-in-repo machine configs
 - CI validation + Renovate (in progress)
 
-## Legacy: vSphere
-
-`vmware.sh` (govc) deploys the original flannel/MetalLB/ingress-nginx
-cluster; machine configs were hand-generated. See `vmware.sh` header for
-GOVC_* environment variables. This cluster predates the secret-handling
-rules above — its history is being rotated/purged; do not reuse its
-credentials or configs.

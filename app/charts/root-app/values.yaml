@@ -1,23 +1,19 @@
-# Defaults preserve the original vSphere cluster behavior exactly.
-# Per-cluster overlays (e.g. values-proxmox.yaml) flip toggles/versions.
-# selfValueFiles controls which values files the self-managing root-app
-# Application passes to itself (empty -> just this file).
+# Modern-stack defaults (Cilium for everything). Per-cluster overlays can
+# flip toggles/versions; selfValueFiles controls which values files the
+# self-managing root-app Application passes to itself (empty -> this file).
 selfValueFiles: []
 
 apps:
-  bitwarden: true
+  bitwarden: false        # re-enable once storage + SMTP are wired to the new cluster
   certManager: true
-  cilium: false
-  dashboard: true
-  gatewayApiCrds: false
-  ingressNginx: true
-  kubePrometheusStack: false
-  prometheus: true
+  cilium: true
+  gatewayApiCrds: true
+  kubePrometheusStack: true
   rookCeph: true
   rookCephCluster: true
 
 versions:
-  certManager: 1.16.3
+  certManager: v1.21.0
   gatewayApi: v1.4.1
   kubePrometheusStack: 87.17.0
-  rookCeph: 1.16.2
+  rookCeph: v1.20.2

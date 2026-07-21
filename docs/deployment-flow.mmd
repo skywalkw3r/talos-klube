@@ -43,7 +43,7 @@ flowchart TD
     %% ================= GITOPS =================
     subgraph GITOPS["🚀 &nbsp;GitOps handoff — Argo CD app-of-apps"]
         ARGO["<b>Argo CD 3.x</b> (wrapper chart)<br/>adopts the bootstrap Cilium release"]
-        ROOT["<b>root-app</b> · self-managing<br/>values-proxmox.yaml overlay<br/>(defaults = legacy vSphere set)"]
+        ROOT["<b>root-app</b> · self-managing<br/>per-cluster values overlays<br/>(values-proxmox.yaml)"]
         APP1["cilium"]
         APP2["gateway-api-crds"]
         APP3["cert-manager"]
