@@ -87,21 +87,27 @@ cilium:
         - httpV2
       serviceMonitor:
         enabled: true
+        trustCRDsExist: true
     tls:
       auto:
         enabled: true
         method: cronJob
         schedule: "0 0 1 */4 *"
 
-  # ServiceMonitors on — kube-prometheus-stack's CRDs are present.
+  # ServiceMonitors on. trustCRDsExist lets helm template render them
+  # before kube-prometheus-stack installs the monitoring.coreos.com CRDs
+  # (Cilium bootstraps first on a fresh cluster); Argo applies them once
+  # the CRDs exist.
   prometheus:
     enabled: true
     serviceMonitor:
       enabled: true
+      trustCRDsExist: true
   operator:
     rollOutPods: true
     prometheus:
       enabled: true
       serviceMonitor:
         enabled: true
+        trustCRDsExist: true
   rollOutCiliumPods: true
