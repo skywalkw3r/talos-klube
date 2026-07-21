@@ -1,0 +1,123 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: bitwarden
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://charts.bitwarden.com/
+    chart: self-host
+    targetRevision: 2025.1.0
+    helm:
+      values: |
+        component:
+          scim:
+            enabled: false
+        general:
+          domain: 'vault.lab.homelabz.xyz'
+          ingress:
+            enabled: true
+            className: 'nginx'
+            cert:
+              tls:
+                name: tls-secret
+                clusterIssuer: letsencrypt-staging
+          email:
+            replyToEmail: 'vault@homelabz.xyz'
+            smtpHost: 'smtp.gmail.com'
+            smtpPort: '587'
+            smtpSsl: 'true'
+        enableCloudCommunication: false
+        sharedStorageClassName: ceph-filesystem
+        volume:
+          logs:
+            enabled: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: bitwarden
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+  patchesStrategicMerge:
+    - kind: StatefulSet
+      name: bitwarden-self-host-mssql
+      namespace: bitwarden
+      patch: |-
+        spec:
+          template:
+            spec:
+              securityContext:
+                fsGroup: 10001
+                runAsUser: 10001
+                runAsNonRoot: true
+    - kind: Deployment
+      name: bitwarden-self-host-admin
+      namespace: bitwarden
+      patch: |-
+        spec:
+          template:
+            spec:
+              securityContext:
+                fsGroup: 10001
+                runAsUser: 10001
+                runAsNonRoot: true
+    - kind: Deployment
+      name: bitwarden-self-host-events
+      namespace: bitwarden
+      patch: |-
+        spec:
+          template:
+            spec:
+              securityContext:
+                fsGroup: 10001
+                runAsUser: 10001
+                runAsNonRoot: true
+    - kind: Deployment
+      name: bitwarden-self-host-icons
+      namespace: bitwarden
+      patch: |-
+        spec:
+          template:
+            spec:
+              securityContext:
+                fsGroup: 10001
+                runAsUser: 10001
+                runAsNonRoot: true
+    - kind: Deployment
+      name: bitwarden-self-host-identity
+      namespace: bitwarden
+      patch: |-
+        spec:
+          template:
+            spec:
+              securityContext:
+                fsGroup: 10001
+                runAsUser: 10001
+                runAsNonRoot: true
+    - kind: Deployment
+      name: bitwarden-self-host-sso
+      namespace: bitwarden
+      patch: |-
+        spec:
+          template:
+            spec:
+              securityContext:
+                fsGroup: 10001
+                runAsUser: 10001
+                runAsNonRoot: true
+    - kind: Deployment
+      name: bitwarden-self-host-notifications
+      namespace: bitwarden
+      patch: |-
+        spec:
+          template:
+            spec:
+              securityContext:
+                fsGroup: 10001
+                runAsUser: 10001
+                runAsNonRoot: true

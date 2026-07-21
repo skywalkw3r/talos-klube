@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: troubleshooting-pod
+  namespace: operators
+spec:
+  containers:
+  - name: troubleshooting
+    image: busybox # Or any image with `tcpdump`, `ping`, `traceroute`
+    command: ["sleep", "infinity"] 
+    securityContext:
+      capabilities:
+        add:
+          - NET_ADMIN
+          - NET_RAW
+    imagePullPolicy: IfNotPresent
+  hostNetwork: true # Important for network troubleshooting

@@ -1,0 +1,8 @@
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+  name: 5-dvs-servers
+  namespace: metallb-system
+spec:
+  addresses:
+  - 10.5.5.96-10.5.5.100 
