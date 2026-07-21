@@ -11,13 +11,6 @@ spec:
     repoURL: https://charts.rook.io/release
     chart: rook-ceph
     targetRevision: {{ .Values.versions.rookCeph }}
-    helm:
-      values: |
-        # Rook 1.20's ceph-csi-operator controller-manager crashloops
-        # (Driver/OperatorConfig cache sync timeout); use the proven
-        # in-operator CSI provisioner instead.
-        csi:
-          disableCsiOperator: true
   destination:
     server: https://kubernetes.default.svc
     namespace: rook-ceph
@@ -30,4 +23,9 @@ spec:
       selfHeal: true
     syncOptions:
     - CreateNamespace=true
+    # The ceph-csi-operator subchart ships Driver/OperatorConfig CRDs whose
+    # schemas exceed the 262KB client-side apply annotation limit — without
+    # SSA those two CRDs silently fail to install and the CSI operator
+    # crashloops (cache sync on missing kinds).
+    - ServerSideApply=true
 {{- end }}
