@@ -8,6 +8,7 @@ set -euo pipefail
 ## Required environment:
 #   export PROXMOX_SSH='root@pve.example.lan'   # SSH target for the PVE node
 #   export NODE_IPS='10.5.6.11,10.5.6.12,10.5.6.13'
+#   export GATEWAY='10.5.6.1' PREFIX=24         # for the cloud-init static ipconfig
 ##
 ## Optional environment (defaults shown):
 #   export CLUSTER_NAME=klube-pmx
@@ -23,6 +24,7 @@ set -euo pipefail
 
 CLUSTER_NAME=${CLUSTER_NAME:=klube-pmx}
 TALOS_VERSION=${TALOS_VERSION:=v1.13.6}
+DNS_SERVERS=${DNS_SERVERS:=1.1.1.1,9.9.9.9}
 STORAGE=${STORAGE:=local-lvm}
 SNIPPET_STORAGE=${SNIPPET_STORAGE:=local}
 SNIPPET_PATH=${SNIPPET_PATH:=/var/lib/vz/snippets}
@@ -111,9 +113,15 @@ create () {
             pm "qm set ${vmid} --scsi1 ${STORAGE}:${DATA_DISK},discard=on,ssd=1"
         fi
 
-        # cloud-init drive + our machine-config snippet
-        # (if this fails: pvesm set ${SNIPPET_STORAGE} --content <existing>,snippets)
-        pm "qm set ${vmid} --ide2 ${STORAGE}:cloudinit --cicustom user=${SNIPPET_STORAGE}:snippets/talos-${name}.yaml"
+        # cloud-init drive + our machine-config snippet. ipconfig0 makes the
+        # Proxmox-generated network-config static (matching the machine
+        # config) instead of DHCP; hostname comes from the VM name.
+        # (if qm set fails: pvesm set ${SNIPPET_STORAGE} --content <existing>,snippets)
+        node_ip=$(echo "${NODE_IPS}" | cut -d, -f${i})
+        pm "qm set ${vmid} --ide2 ${STORAGE}:cloudinit \
+            --cicustom user=${SNIPPET_STORAGE}:snippets/talos-${name}.yaml \
+            --ipconfig0 ip=${node_ip}/${PREFIX:?set PREFIX},gw=${GATEWAY:?set GATEWAY} \
+            --nameserver '${DNS_SERVERS//,/ }'"
 
         pm "qm start ${vmid}"
     done
