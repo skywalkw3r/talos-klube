@@ -8,6 +8,7 @@ apps:
   certManager: true
   cilium: true
   gatewayApiCrds: true
+  issuers: true
   kubePrometheusStack: true
   rookCeph: true
   rookCephCluster: true

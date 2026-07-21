@@ -49,7 +49,7 @@ app/
   charts/root-app/          # app-of-apps: one Application template per component
   charts/cilium/            # Cilium wrapper chart + LB-IPAM/L2 policy
   charts/argo-cd/           # Argo CD wrapper chart
-  cert-manager/             # ClusterIssuers (staging/production)
+  charts/issuers/           # ClusterIssuers: internal CA (default), Venafi + ACME toggles
 ```
 
 **Never commit:** `talos/secrets.yaml`, anything in `talos/clusterconfig/`,
