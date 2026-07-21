@@ -14,16 +14,7 @@ machine:
       # Must be false with Cilium bpf.masquerade — the host-forwarded
       # kube-dns path breaks under eBPF masquerading.
       forwardKubeDNSToHost: false
-  # Encrypt STATE and EPHEMERAL partitions at rest (keyed to node identity;
-  # no TPM required). Protects against disk/backup theft on the PVE host.
-  systemDiskEncryption:
-    state:
-      provider: luks2
-      keys:
-        - nodeID: {}
-          slot: 0
-    ephemeral:
-      provider: luks2
-      keys:
-        - nodeID: {}
-          slot: 0
+  # NOTE: systemDiskEncryption is emitted by gen-config.sh (TPM-sealed
+  # keys when SECUREBOOT=1, nodeID keys otherwise). It must live in ONE
+  # patch only — key lists merge by appending, and two keys claiming the
+  # same LUKS slot fail validation.

@@ -1,0 +1,96 @@
+%%{init: {
+  "theme": "base",
+  "themeVariables": {
+    "fontFamily": "ui-sans-serif, system-ui, sans-serif",
+    "fontSize": "14px",
+    "primaryColor": "#1c2733",
+    "primaryTextColor": "#e6edf3",
+    "primaryBorderColor": "#3d5266",
+    "lineColor": "#7d8590",
+    "clusterBkg": "#10161d",
+    "clusterBorder": "#30363d",
+    "edgeLabelBackground": "#10161d"
+  },
+  "flowchart": { "curve": "basis", "nodeSpacing": 40, "rankSpacing": 55 }
+}}%%
+flowchart TD
+
+    %% ================= WORKSTATION =================
+    subgraph LOCAL["💻 &nbsp;Workstation — bootstrap.sh"]
+        ENV["<b>talos/env</b><br/>site config: node IPs · VIP · VLAN tag<br/>LB range · API DNS name · sizing<br/><i>gitignored — site data never committed</i>"]
+        GEN["<b>talos/gen-config.sh</b><br/>talosctl gen secrets + gen config<br/>HostnameConfig doc per node (auto→explicit)<br/>LUKS2 encryption patch (TPM ⇄ nodeID)<br/>static IP + VIP + cert-SAN patches"]
+        SECRETS["<b>secrets.yaml · clusterconfig/</b><br/>fresh PKI per cluster<br/><i>gitignored — the leak that never repeats</i>"]
+        ENV --> GEN --> SECRETS
+    end
+
+    %% ================= PROXMOX =================
+    subgraph PVE["🖥️ &nbsp;Proxmox VE host — proxmox.sh (SSH + qm)"]
+        IMG["<b>Talos Image Factory</b><br/>schematic: qemu-guest-agent<br/>nocloud-amd64-<b>secureboot</b>.raw.xz<br/>(Sidero-signed UKI)"]
+        VMS["<b>3 × control-plane VMs</b><br/>OVMF UEFI · empty efivars (setup mode)<br/>vTPM 2.0 · protection=1 · onboot=1<br/>8 vCPU · 16 GB · 40G OS + 100G Ceph disk"]
+        CIDATA["<b>cloud-init (nocloud)</b><br/>user-data = Talos machine config<br/>static ipconfig0 — no DHCP anywhere"]
+        IMG --> VMS
+        CIDATA --> VMS
+    end
+    SECRETS -- "scp snippets" --> CIDATA
+
+    %% ================= SECURITY CHAIN =================
+    subgraph SECBOOT["🔐 &nbsp;First-boot security chain — per node"]
+        ENROLL["UEFI in <b>setup mode</b><br/>UKI auto-enrolls Sidero keys"]
+        ENFORCE["reboot ⟶ <b>Secure Boot ENFORCED</b><br/>only signed Talos boots"]
+        TPM["<b>LUKS2</b> on STATE + EPHEMERAL<br/>keys sealed in vTPM<br/>(measured boot — disks unreadable elsewhere)"]
+        INSTALL["Talos install ⟶ reboot<br/>immutable OS · no SSH · API-only"]
+        ENROLL --> ENFORCE --> TPM --> INSTALL
+    end
+    VMS --> ENROLL
+
+    %% ================= CLUSTER =================
+    subgraph CLUSTER["☸️ &nbsp;Cluster bring-up"]
+        ETCD["<b>etcd bootstrap</b><br/>3-node quorum"]
+        API["<b>kube-apiserver</b> behind shared VIP<br/>+ DNS name in cert SANs<br/>KubePrism localhost:7445 for node-local HA"]
+        GWCRD["<b>Gateway API v1.4.1 CRDs</b><br/>standard channel — before Cilium starts"]
+        CILIUM["<b>Cilium 1.19 — everything</b><br/>CNI · kube-proxy-free eBPF<br/>🔒 WireGuard pod+node encryption<br/>LB-IPAM + L2 announcements (no MetalLB)<br/>Gateway API (no ingress-nginx) · Hubble"]
+        POOL["<b>CiliumLoadBalancerIPPool</b><br/>range applied from env at bootstrap<br/><i>site addressing stays out of git</i>"]
+        ETCD --> API --> GWCRD --> CILIUM --> POOL
+    end
+    INSTALL --> ETCD
+
+    %% ================= GITOPS =================
+    subgraph GITOPS["🚀 &nbsp;GitOps handoff — Argo CD app-of-apps"]
+        ARGO["<b>Argo CD 3.x</b> (wrapper chart)<br/>adopts the bootstrap Cilium release"]
+        ROOT["<b>root-app</b> · self-managing<br/>values-proxmox.yaml overlay<br/>(defaults = legacy vSphere set)"]
+        APP1["cilium"]
+        APP2["gateway-api-crds"]
+        APP3["cert-manager"]
+        APP4["kube-prometheus-stack<br/>Prometheus · Grafana · Alertmanager"]
+        APP5["rook-ceph + cluster<br/>Ceph on the 100G disks<br/>block · filesystem · bucket"]
+        ARGO --> ROOT
+        ROOT --> APP1 & APP2 & APP3 & APP4 & APP5
+    end
+    POOL --> ARGO
+
+    %% ================= TRAFFIC =================
+    subgraph TRAFFIC["🌐 &nbsp;Runtime request path"]
+        CLIENT(["client"])
+        DNS["corporate DNS<br/>app name → LB IP"]
+        LB["LB IP answered via<br/>L2 (ARP) announcement"]
+        ENVOY["Cilium Envoy<br/><b>Gateway</b> (class: cilium)"]
+        ROUTE["<b>HTTPRoute</b><br/>hostname → backend"]
+        PODS["pods<br/>pod↔pod traffic WireGuard-encrypted"]
+        CLIENT --> DNS --> LB --> ENVOY --> ROUTE --> PODS
+    end
+    APP1 -. "provides" .-> ENVOY
+
+    %% ================= STYLING =================
+    classDef local fill:#0d2137,stroke:#2f81f7,color:#cde3ff
+    classDef pve fill:#1a2733,stroke:#39c5cf,color:#cdf5f8
+    classDef sec fill:#0f2417,stroke:#3fb950,color:#d2f8d2
+    classDef clus fill:#211a33,stroke:#a371f7,color:#e8dcff
+    classDef git fill:#2b1d12,stroke:#f0883e,color:#ffe1c7
+    classDef net fill:#2b1220,stroke:#ec6cb9,color:#ffd9ec
+
+    class ENV,GEN,SECRETS local
+    class IMG,VMS,CIDATA pve
+    class ENROLL,ENFORCE,TPM,INSTALL sec
+    class ETCD,API,GWCRD,CILIUM,POOL clus
+    class ARGO,ROOT,APP1,APP2,APP3,APP4,APP5 git
+    class CLIENT,DNS,LB,ENVOY,ROUTE,PODS net

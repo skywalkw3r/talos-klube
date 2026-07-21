@@ -35,6 +35,9 @@ CP_CPU=${CP_CPU:=4}
 CP_MEM=${CP_MEM:=8192}
 CP_DISK=${CP_DISK:=40}
 DATA_DISK=${DATA_DISK:=100}
+SECUREBOOT=${SECUREBOOT:=1}       # UEFI + SecureBoot (Sidero-signed UKI) + vTPM
+PROTECT=${PROTECT:=1}             # PVE protection flag (blocks accidental destroy)
+IMG_VARIANT=""; [ "${SECUREBOOT}" = "1" ] && IMG_VARIANT="-secureboot"
 
 REPO_DIR=$(cd "$(dirname "$0")" && pwd)
 CONFIG_DIR="${REPO_DIR}/talos/clusterconfig"
@@ -71,9 +74,9 @@ upload_image () {
     ## Download the nocloud disk image onto the PVE node (idempotent)
     local id url
     id=$(schematic_id)
-    url="https://factory.talos.dev/image/${id}/${TALOS_VERSION}/nocloud-amd64.raw.xz"
+    url="https://factory.talos.dev/image/${id}/${TALOS_VERSION}/nocloud-amd64${IMG_VARIANT}.raw.xz"
     echo "image: ${url}"
-    pm "test -f /var/lib/vz/talos-${TALOS_VERSION}.raw || (curl -fL '${url}' -o /var/lib/vz/talos-${TALOS_VERSION}.raw.xz && xz -d /var/lib/vz/talos-${TALOS_VERSION}.raw.xz)"
+    pm "test -f /var/lib/vz/talos-${TALOS_VERSION}${IMG_VARIANT}.raw || (curl -fL '${url}' -o /var/lib/vz/talos-${TALOS_VERSION}${IMG_VARIANT}.raw.xz && xz -d /var/lib/vz/talos-${TALOS_VERSION}${IMG_VARIANT}.raw.xz)"
     pm "mkdir -p ${SNIPPET_PATH}"
 }
 
@@ -100,10 +103,20 @@ create () {
         pm "qm create ${vmid} --name ${name} --machine q35 --ostype l26 \
             --cpu host --cores ${CP_CPU} --memory ${CP_MEM} --balloon 0 \
             --scsihw virtio-scsi-single --net0 ${net0} \
-            --agent enabled=1 --onboot 1"
+            --agent enabled=1 --onboot 1 --protection ${PROTECT}"
+
+        if [ "${SECUREBOOT}" = "1" ]; then
+            # OVMF with EMPTY efivars (setup mode): the Talos SecureBoot UKI
+            # auto-enrolls the Sidero signing keys on first boot, then
+            # reboots with SecureBoot enforced. vTPM seals the disk
+            # encryption keys against measured boot.
+            pm "qm set ${vmid} --bios ovmf \
+                --efidisk0 ${STORAGE}:1,efitype=4m,pre-enrolled-keys=0 \
+                --tpmstate0 ${STORAGE}:1,version=v2.0"
+        fi
 
         # import the Talos disk image as the boot disk and grow it
-        pm "qm importdisk ${vmid} /var/lib/vz/talos-${TALOS_VERSION}.raw ${STORAGE}" >/dev/null
+        pm "qm importdisk ${vmid} /var/lib/vz/talos-${TALOS_VERSION}${IMG_VARIANT}.raw ${STORAGE}" >/dev/null
         disk_ref=$(pm "qm config ${vmid}" | sed -n 's/^unused0: //p')
         pm "qm set ${vmid} --scsi0 '${disk_ref},discard=on,ssd=1,iothread=1' --boot order=scsi0"
         pm "qm disk resize ${vmid} scsi0 ${CP_DISK}G"
@@ -134,6 +147,7 @@ destroy() {
         name="${CLUSTER_NAME}-m${i}"
         vmid=$((VMID_BASE + i))
         echo "destroying ${name} (vmid ${vmid})"
+        pm "qm set ${vmid} --protection 0 >/dev/null 2>&1 || true"
         pm "qm stop ${vmid} --skiplock 1 || true"
         pm "qm destroy ${vmid} --purge 1 || true"
         pm "rm -f ${SNIPPET_PATH}/talos-${name}.yaml"

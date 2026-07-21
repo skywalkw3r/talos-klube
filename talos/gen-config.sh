@@ -54,6 +54,32 @@ if [ ! -f "${SECRETS}" ]; then
     echo "generated new cluster secrets at ${SECRETS} (gitignored)"
 fi
 
+# Disk encryption is emitted here as the ONLY source (never also in
+# patches/cluster.yaml — key lists merge by appending and duplicate LUKS
+# slots fail validation): TPM-sealed when SECUREBOOT=1, nodeID otherwise.
+if [ "${SECUREBOOT:-1}" = "1" ]; then
+    INSTALLER="installer-secureboot"
+    KEY_TYPE="tpm"
+else
+    INSTALLER="installer"
+    KEY_TYPE="nodeID"
+fi
+cat > "${OUT}/patch-encryption.yaml" <<EOF
+machine:
+  systemDiskEncryption:
+    state:
+      provider: luks2
+      keys:
+        - ${KEY_TYPE}: {}
+          slot: 0
+    ephemeral:
+      provider: luks2
+      keys:
+        - ${KEY_TYPE}: {}
+          slot: 0
+EOF
+SB_PATCH=(--config-patch @"${OUT}/patch-encryption.yaml")
+
 # Optional DNS name for the API endpoint (kept out of git — env only):
 # added to both the kube-apiserver and Talos API cert SANs.
 SAN_PATCH=()
@@ -73,8 +99,9 @@ fi
 talosctl gen config "${CLUSTER_NAME}" "https://${VIP}:6443" \
     --with-secrets "${SECRETS}" \
     --install-disk "${INSTALL_DISK}" \
-    --install-image "factory.talos.dev/installer/${SCHEMATIC_ID}:${TALOS_VERSION}" \
+    --install-image "factory.talos.dev/${INSTALLER}/${SCHEMATIC_ID}:${TALOS_VERSION}" \
     --config-patch @"${TALOS_DIR}/patches/cluster.yaml" \
+    "${SB_PATCH[@]:-}" \
     "${SAN_PATCH[@]:-}" \
     --with-docs=false --with-examples=false \
     --output-types controlplane,talosconfig \
