@@ -1,0 +1,26 @@
+{{- if .Values.apps.externalSecrets }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: external-secrets
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://charts.external-secrets.io
+    chart: external-secrets
+    targetRevision: {{ .Values.versions.externalSecrets }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: external-secrets
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+    - ServerSideApply=true
+{{- end }}
+# The ClusterSecretStore pointing at OpenBao carries a site URL + auth,
+# so it is applied out-of-band (see README) — never committed here.
