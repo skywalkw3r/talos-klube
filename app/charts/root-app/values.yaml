@@ -27,5 +27,7 @@ versions:
   keycloakx: 7.2.2
   kubePrometheusStack: 87.17.0
   metricsServer: 3.13.1
-  rookCeph: v1.20.2
+  # Pinned to 1.19.x: 1.20's ceph-csi-operator won't create Driver CRs
+  # (no RBD provisioner). 1.19 uses the proven in-operator legacy CSI.
+  rookCeph: v1.19.7
   trivyOperator: 0.34.0
