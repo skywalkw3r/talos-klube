@@ -1,0 +1,21 @@
+{{- if .Values.apps.rbac }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rbac
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/skywalkw3r/talos-klube.git
+    path: app/charts/rbac
+    targetRevision: main
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: headlamp
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+{{- end }}

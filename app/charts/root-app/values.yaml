@@ -14,6 +14,7 @@ apps:
   keycloak: true
   kubePrometheusStack: true
   metricsServer: true
+  rbac: true
   rookCeph: true
   rookCephCluster: true
   trivyOperator: true

@@ -1,0 +1,19 @@
+# Cluster RBAC identities. Tokens are minted on demand, short-lived:
+#   kubectl -n headlamp create token headlamp-viewer --duration=8h
+viewer:
+  enabled: true
+  name: headlamp-viewer
+  namespace: headlamp
+  # apiGroups whose custom resources the viewer may read (get/list/watch).
+  # The built-in aggregated `view` role covers core namespaced resources
+  # and deliberately EXCLUDES Secrets — keep it that way.
+  crdGroups:
+    - argoproj.io
+    - aquasecurity.github.io
+    - ceph.rook.io
+    - cert-manager.io
+    - cilium.io
+    - external-secrets.io
+    - gateway.networking.k8s.io
+    - monitoring.coreos.com
+    - objectbucket.io
