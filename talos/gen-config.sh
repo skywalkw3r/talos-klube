@@ -54,11 +54,28 @@ if [ ! -f "${SECRETS}" ]; then
     echo "generated new cluster secrets at ${SECRETS} (gitignored)"
 fi
 
+# Optional DNS name for the API endpoint (kept out of git — env only):
+# added to both the kube-apiserver and Talos API cert SANs.
+SAN_PATCH=()
+if [ -n "${API_DNS_NAME:-}" ]; then
+    cat > "${OUT}/patch-sans.yaml" <<EOF
+machine:
+  certSANs:
+    - ${API_DNS_NAME}
+cluster:
+  apiServer:
+    certSANs:
+      - ${API_DNS_NAME}
+EOF
+    SAN_PATCH=(--config-patch @"${OUT}/patch-sans.yaml")
+fi
+
 talosctl gen config "${CLUSTER_NAME}" "https://${VIP}:6443" \
     --with-secrets "${SECRETS}" \
     --install-disk "${INSTALL_DISK}" \
     --install-image "factory.talos.dev/installer/${SCHEMATIC_ID}:${TALOS_VERSION}" \
     --config-patch @"${TALOS_DIR}/patches/cluster.yaml" \
+    "${SAN_PATCH[@]:-}" \
     --with-docs=false --with-examples=false \
     --output-types controlplane,talosconfig \
     --output "${OUT}/" --force
