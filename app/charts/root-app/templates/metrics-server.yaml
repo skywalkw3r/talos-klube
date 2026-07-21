@@ -1,0 +1,28 @@
+{{- if .Values.apps.metricsServer }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: metrics-server
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://kubernetes-sigs.github.io/metrics-server/
+    chart: metrics-server
+    targetRevision: {{ .Values.versions.metricsServer }}
+    helm:
+      values: |
+        args:
+          # Talos kubelets serve self-signed certs by default; the
+          # production-grade alternative is kubelet serverTLSBootstrap
+          # plus a CSR approver.
+          - --kubelet-insecure-tls
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+{{- end }}

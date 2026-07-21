@@ -1,0 +1,53 @@
+{{- if .Values.apps.keycloak }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: keycloak
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://codecentric.github.io/helm-charts
+    chart: keycloakx
+    targetRevision: {{ .Values.versions.keycloakx }}
+    helm:
+      values: |
+        # DEV MODE: embedded H2, realm config is EPHEMERAL (lost on pod
+        # restart). Before real use: CloudNativePG + `start` + KC_DB env.
+        command:
+          - /opt/keycloak/bin/kc.sh
+        args:
+          - start-dev
+          - --http-relative-path=/auth
+        # Expects Secret keycloak-admin (key: password) in the keycloak
+        # namespace, created out-of-band — never committed.
+        extraEnv: |
+          - name: KC_BOOTSTRAP_ADMIN_USERNAME
+            value: admin
+          - name: KC_BOOTSTRAP_ADMIN_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: keycloak-admin
+                key: password
+          - name: KEYCLOAK_ADMIN
+            value: admin
+          - name: KEYCLOAK_ADMIN_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: keycloak-admin
+                key: password
+          - name: KC_PROXY_HEADERS
+            value: xforwarded
+          - name: KC_HOSTNAME_STRICT
+            value: "false"
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: keycloak
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+{{- end }}

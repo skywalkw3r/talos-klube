@@ -85,22 +85,23 @@ cilium:
         - flow
         - icmp
         - httpV2
+      serviceMonitor:
+        enabled: true
     tls:
       auto:
         enabled: true
         method: cronJob
         schedule: "0 0 1 */4 *"
 
-  # Metrics endpoints on now; flip serviceMonitor.enabled to true after
-  # kube-prometheus-stack is synced (its CRDs must exist first).
+  # ServiceMonitors on — kube-prometheus-stack's CRDs are present.
   prometheus:
     enabled: true
     serviceMonitor:
-      enabled: false
+      enabled: true
   operator:
     rollOutPods: true
     prometheus:
       enabled: true
       serviceMonitor:
-        enabled: false
+        enabled: true
   rollOutCiliumPods: true

@@ -10,6 +10,7 @@ kubeconfig
 # exclude config files for talos
 talosconfig
 talosctl
+internal-ca.crt
 
 # legacy local scratch dir (root-anchored — app/bootstrap/ IS tracked)
 /bootstrap/
@@ -26,6 +27,7 @@ _out/
 clusterconfig/
 talos/env
 talos/.schematic-id
+talos/site-*.yaml
 
 # SOPS / age key material — the age private key must never be committed
 age.key
