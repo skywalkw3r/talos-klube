@@ -14,6 +14,8 @@ spec:
     helm:
       values: |
         operatorNamespace: rook-ceph
+        toolbox:
+          enabled: true
   destination:
     server: https://kubernetes.default.svc
     namespace: rook-ceph
