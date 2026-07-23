@@ -14,6 +14,18 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: cdi
+  # The cdi-operator reconciles its OWN CRD and prunes the v1alpha1 version that
+  # the upstream release manifest still ships. Argo re-adds it, the operator
+  # strips it again, and the app flaps OutOfSync forever against selfHeal.
+  # Ignoring spec.versions costs little: ignoreDifferences only suppresses the
+  # diff, so a real version bump still applies the new schema on the next sync
+  # (the images and Deployments change too, which triggers one).
+  ignoreDifferences:
+  - group: apiextensions.k8s.io
+    kind: CustomResourceDefinition
+    name: cdis.cdi.kubevirt.io
+    jsonPointers:
+    - /spec/versions
   syncPolicy:
     automated:
       # As with kubevirt: pruning the CDI CR would pull the disk-import path
