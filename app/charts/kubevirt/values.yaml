@@ -18,9 +18,14 @@ featureGates: []
 # VMPersistentState is enabled above.
 vmStateStorageClass: ceph-filesystem
 
-# Live-migrate VMs off a node when it drains, rather than killing them. Safe
-# here because all three nodes are identical nested-virt guests on one host.
-evictionStrategy: LiveMigrate
+# Cluster-level behaviour when a node drains. Deliberately NOT plain
+# "LiveMigrate": that blocks the drain indefinitely for any VMI that cannot
+# migrate — a containerDisk VM, or any disk that is not RWX — which would hang
+# `talosctl upgrade` and every rolling node operation on this cluster.
+# "LiveMigrateIfPossible" migrates what can migrate and shuts down the rest, so
+# a drain always completes. Set to "" to omit the field and leave each VM to
+# decide for itself.
+evictionStrategy: LiveMigrateIfPossible
 
 migrations:
   allowAutoConverge: true

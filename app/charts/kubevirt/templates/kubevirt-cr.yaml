@@ -18,7 +18,9 @@ spec:
     workloadUpdateMethods:
     - LiveMigrate
   configuration:
-    evictionStrategy: {{ .Values.evictionStrategy }}
+    {{- with .Values.evictionStrategy }}
+    evictionStrategy: {{ . }}
+    {{- end }}
     {{- with .Values.migrations }}
     migrations:
       {{- toYaml . | nindent 6 }}

@@ -34,14 +34,14 @@ flowchart TD
         KVM["<b>/dev/kvm</b> present · crw-rw-rw-"]
         VHOST["<b>/dev/vhost-net · /dev/vhost-vsock</b><br/><i>real NIC offload + guest-agent channel</i>"]
         FLAG["<b>svm</b> in /proc/cpuinfo<br/><i>hardware acceleration, not emulation</i>"]
-        NOTE["<i>CDI and KubeVirt both ship arm64 —</i><br/><i>what rules out a laptop is KVM availability,</i><br/><i>not image architecture</i>"]
+        NOTE["<i>CDI and KubeVirt both ship arm64,</i><br/><i>and Apple Silicon can accelerate arm64 guests.</i><br/><i>amd64 is required because the oVirt estate</i><br/><i>under assessment is x86_64</i>"]
     end
     VMS --> KVM
 
     %% ================= CLUSTER =================
     subgraph K8S["☸️ &nbsp;klube-pmx — Talos v1.13.6 · k8s v1.36.2 · 3 control-plane, untainted"]
         ARGO["<b>Argo CD app-of-apps</b><br/>root-app ⟶ one Application per component"]
-        KVCHART["<b>app/charts/kubevirt</b><br/>vendored operator.yaml (wave 0)<br/>+ KubeVirt CR (wave 1)<br/><i>ServerSideApply — CRD is 462 KB</i><br/><i>vs the 262 KB apply ceiling</i>"]
+        KVCHART["<b>app/charts/kubevirt</b><br/>vendored operator.yaml (wave 0)<br/>+ KubeVirt CR (wave 1)<br/><i>ServerSideApply — CRD sits at 91%</i><br/><i>of the 262 KB apply ceiling</i>"]
         CDICHART["<b>app/charts/cdi</b><br/>vendored operator.yaml (wave 0)<br/>+ CDI CR (wave 1)<br/><i>PSA label injected by vendor.sh</i>"]
         CEPH["<b>Rook-Ceph 1.19.7</b><br/>ceph-block RBD (default) — CDI scratch + VM disks<br/>ceph-filesystem RWX — vTPM/NVRAM state<br/><i>migration needs RWX + Block requested explicitly</i>"]
         NS["<b>vm-lab namespace</b><br/>PSA enforce=privileged<br/><i>insurance for virt-launcher,</i><br/><i>the pod type with elevated needs</i>"]

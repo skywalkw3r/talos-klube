@@ -54,17 +54,25 @@ nothing below needs tolerations.
 
 ### On architecture, precisely
 
-A claim worth getting right, because it is easy to repeat the wrong version:
-**CDI does ship `linux/arm64`.** Verified against the registry —
-`quay.io/kubevirt/cdi-importer:v1.65.0` publishes `amd64`, `arm64` and `s390x`.
-KubeVirt supports arm64 too.
+Worth getting right, because there are two wrong versions of this in
+circulation.
 
-What actually rules out an Apple Silicon Mac as the lab host is **KVM
-availability, not image architecture**. Kubernetes on a Mac runs inside a Linux
-VM, and getting a working `/dev/kvm` inside *that* guest is the part that does
-not hold up — which is why the lab lives on a machine that is a hypervisor in
-its own right. Being amd64 here is a convenience (the widest-tested path), not
-the load-bearing reason.
+**CDI is not amd64-only.** Verified against the registry: every CDI component
+at `v1.65.0` publishes a multi-arch index covering `amd64`, `arm64` and
+`s390x`. Multi-arch landed at CDI v1.62.0. `virt-operator:v1.8.4` is the same.
+The KubeVirt user guide's arm64 page still says CDI is unsupported; it is
+stale. Anyone repeating "CDI does not exist on arm64" is citing that page
+rather than the artifacts.
+
+**And it is not about `/dev/kvm` on the Mac either.** Apple Silicon from M3
+onward exposes nested virtualization, and Virtualization.framework gives an
+arm64 Linux guest hardware acceleration. A Mac can host an accelerated arm64
+KubeVirt cluster.
+
+The actual reason this lab is amd64 is simpler: **an oVirt estate is x86_64.**
+The VMs under assessment are x86_64, so an arm64 host would have to emulate
+their architecture wholesale — correct, but far too slow to be worth doing.
+Architecture has to match the source estate, not the laptop.
 
 ## What got installed
 
@@ -139,11 +147,17 @@ assessment tool sits upstream and answers that question.
 
 ## Things that will bite
 
-**1. ServerSideApply is mandatory.** The `kubevirts.kubevirt.io` CRD in the
-pinned v1.8.4 manifest is **461,963 bytes** — 1.76× the 262,144-byte
-client-side-apply annotation ceiling. Without SSA the apply fails with
-`metadata.annotations: Too long`, which Argo surfaces as a sync error. Same trap
-this repo already hit with Rook's CSI CRDs and documented in `rook-ceph.yaml`.
+**1. ServerSideApply, and be honest about why.** The `kubevirts.kubevirt.io`
+CRD minifies to **~239 KB** against the 262,144-byte client-side-apply
+annotation ceiling. That is *under* the limit — 91% of it — so client-side
+apply does not fail today. It leaves ~23 KB of headroom on a CRD that only
+grows, and once it does tip over, the failure is
+`metadata.annotations: Too long`. Same reasoning that already forced SSA for
+Rook's CSI CRDs in `rook-ceph.yaml`. Turning it on now costs nothing.
+
+(Raw YAML for that CRD is ~462 KB, but the annotation stores minified JSON, so
+the YAML byte count is the wrong number to compare against the ceiling — an
+easy mistake to make in both directions.)
 
 **2. `prune: false` on both.** Pruning the KubeVirt CR tears down virt-handler
 and every running VM with it. That should be a deliberate act, never a sync
@@ -162,7 +176,15 @@ GA'd gates stay registered and are effectively no-ops, deprecated ones emit
 warnings — but because none are needed yet, and an empty list keeps the CR
 honest about what the lab actually depends on. Add only what an experiment needs.
 
-**5. Registries.** KubeVirt and CDI pull exclusively from `quay.io`, so Docker
+**5. Cluster eviction strategy can hang node drains.** Setting
+`evictionStrategy: LiveMigrate` cluster-wide sounds right and is a trap: any VMI
+that *cannot* migrate — a containerDisk VM, or any disk that is not RWX — blocks
+the drain indefinitely, which means `talosctl upgrade` and every rolling node
+operation stalls. The chart defaults to `LiveMigrateIfPossible`, which migrates
+what it can and shuts down the rest so a drain always completes. Set it to `""`
+to omit the field and leave the decision to each VM.
+
+**6. Registries.** KubeVirt and CDI pull exclusively from `quay.io`, so Docker
 Hub's anonymous rate limit is a non-issue for this stack.
 
 ## Storage

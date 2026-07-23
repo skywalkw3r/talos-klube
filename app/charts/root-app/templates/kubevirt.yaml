@@ -22,8 +22,10 @@ spec:
       selfHeal: true
     syncOptions:
     - CreateNamespace=true
-    # Same 262KB client-side-apply ceiling that forced SSA for rook-ceph: the
-    # KubeVirt CRD's schema blows past it, and without SSA it fails silently.
+    # The kubevirts.kubevirt.io CRD minifies to ~239 KB against the 262,144-byte
+    # client-side-apply annotation ceiling — 91% of it, with only one direction
+    # of travel as upstream adds fields. Same reasoning that already forced SSA
+    # for rook-ceph's CSI CRDs; prudent here rather than strictly required yet.
     - ServerSideApply=true
     retry:
       limit: 5

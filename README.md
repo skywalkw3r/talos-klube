@@ -118,11 +118,13 @@ The PVE host has `nested=1` and the VMs run `--cpu host`, so `/dev/kvm`,
 `vhost-net` and `vhost-vsock` are all real inside the Talos guests: hardware
 acceleration, not software emulation.
 
-Two traps are worth knowing before syncing — the KubeVirt CRD is 462 KB against
-a 262 KB apply ceiling (so `ServerSideApply` is mandatory), and CDI's upstream
-namespace lacks the privileged PSA label Talos needs. Both are handled in the
-charts and explained in **[docs/kubevirt-lab.md](docs/kubevirt-lab.md)** ·
-diagram [docs/kubevirt-lab.mmd](docs/kubevirt-lab.mmd).
+Three things the charts handle that a stock install would not: `ServerSideApply`
+(the KubeVirt CRD sits at 91% of the client-side-apply annotation ceiling),
+the privileged PSA label Talos needs that CDI's upstream namespace omits, and a
+cluster eviction strategy that will not hang `talosctl upgrade` on a VM that
+cannot migrate. All explained in
+**[docs/kubevirt-lab.md](docs/kubevirt-lab.md)** · diagram
+[docs/kubevirt-lab.mmd](docs/kubevirt-lab.mmd).
 
 ## TODO (OCP-parity backlog)
 
