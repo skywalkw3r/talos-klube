@@ -5,8 +5,10 @@ selfValueFiles: []
 
 apps:
   bitwarden: false        # re-enable once storage + SMTP are wired to the new cluster
+  cdi: true              # disk import; pairs with kubevirt
   certManager: true
   cilium: true
+  kubevirt: true
   externalSecrets: true
   gatewayApiCrds: true
   headlamp: true
@@ -20,6 +22,11 @@ apps:
   trivyOperator: true
 
 versions:
+  # KubeVirt/CDI manifests are vendored into their charts by
+  # app/charts/vendor.sh, so these are documentation of the pinned release
+  # rather than a chart reference. Keep them in step with what was vendored.
+  kubevirt: v1.8.4
+  cdi: v1.65.0
   certManager: v1.21.0
   externalSecrets: 2.8.0
   gatewayApi: v1.4.1

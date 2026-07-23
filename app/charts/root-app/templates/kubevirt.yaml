@@ -1,0 +1,33 @@
+{{- if .Values.apps.kubevirt }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kubevirt
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/skywalkw3r/talos-klube.git
+    path: app/charts/kubevirt
+    targetRevision: main
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kubevirt
+  syncPolicy:
+    automated:
+      # Never prune. Removing the KubeVirt CR tears down virt-handler and every
+      # running VM with it; that should be a deliberate act, not a sync effect.
+      prune: false
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+    # Same 262KB client-side-apply ceiling that forced SSA for rook-ceph: the
+    # KubeVirt CRD's schema blows past it, and without SSA it fails silently.
+    - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 15s
+        factor: 2
+{{- end }}

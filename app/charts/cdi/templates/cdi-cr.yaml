@@ -1,0 +1,32 @@
+{{- /*
+  Wave 1, for the same reason as the KubeVirt CR: templates/operator.yaml
+  installs the CDI CRD in wave 0 and this resource depends on it.
+*/ -}}
+apiVersion: cdi.kubevirt.io/v1beta1
+kind: CDI
+metadata:
+  name: cdi
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  imagePullPolicy: IfNotPresent
+  infra:
+    nodeSelector:
+      kubernetes.io/os: linux
+  workload:
+    nodeSelector:
+      kubernetes.io/os: linux
+  config:
+    scratchSpaceStorageClass: {{ .Values.scratchSpaceStorageClass }}
+    {{- with .Values.featureGates }}
+    featureGates:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.filesystemOverhead }}
+    filesystemOverhead:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.podResourceRequirements }}
+    podResourceRequirements:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}

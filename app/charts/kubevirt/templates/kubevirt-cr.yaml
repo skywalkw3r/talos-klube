@@ -1,0 +1,32 @@
+{{- /*
+  Wave 1: the operator and its CRDs (templates/operator.yaml) land in wave 0.
+  This CR is what actually makes the operator deploy virt-api / virt-controller
+  / virt-handler, so it must not be applied before its own CRD exists.
+*/ -}}
+apiVersion: kubevirt.io/v1
+kind: KubeVirt
+metadata:
+  name: kubevirt
+  namespace: kubevirt
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  certificateRotateStrategy: {}
+  imagePullPolicy: IfNotPresent
+  # Live-migrate running VMs when KubeVirt itself is upgraded.
+  workloadUpdateStrategy:
+    workloadUpdateMethods:
+    - LiveMigrate
+  configuration:
+    evictionStrategy: {{ .Values.evictionStrategy }}
+    {{- with .Values.migrations }}
+    migrations:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- if has "VMPersistentState" .Values.featureGates }}
+    vmStateStorageClass: {{ .Values.vmStateStorageClass }}
+    {{- end }}
+    developerConfiguration:
+      useEmulation: {{ .Values.useEmulation }}
+      featureGates:
+        {{- toYaml .Values.featureGates | nindent 8 }}

@@ -1,0 +1,9 @@
+apiVersion: v2
+name: kubevirt
+version: 1.0.0
+description: |
+  KubeVirt operator (vendored upstream release manifest) plus the KubeVirt CR
+  that tells it what to deploy. Upstream ships raw manifests, not a Helm chart,
+  so templates/operator.yaml is vendored verbatim by ./vendor.sh and pinned to
+  a known release — the same pinning rationale that applies to the CRDs used by
+  the assessment operator's envtest suite.

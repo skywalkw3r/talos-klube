@@ -1,0 +1,34 @@
+# Namespaces that hold VMs and DataVolumes. Created with privileged PSA
+# because CDI runs its importer pods in the target DataVolume's namespace,
+# not in `cdi` — see templates/workload-namespaces.yaml.
+workloadNamespaces:
+- vm-lab
+
+# Feature gates. Empty by default because none are needed yet — an empty list
+# keeps the CR honest about what this cluster actually depends on. (GA'd gates
+# stay registered and are no-ops if named; deprecated ones emit warnings.)
+# Add only what a given experiment needs.
+#   VMPersistentState — persistent EFI NVRAM + vTPM state. Needed to assess
+#                       oVirt VMs that carry a vTPM. Requires vmStateStorageClass
+#                       to be RWX (ceph-filesystem), not RWO.
+#   VMExport          — export a VM's disks over HTTP.
+featureGates: []
+
+# RWX filesystem class backing persistent vTPM/NVRAM. Only consulted when
+# VMPersistentState is enabled above.
+vmStateStorageClass: ceph-filesystem
+
+# Live-migrate VMs off a node when it drains, rather than killing them. Safe
+# here because all three nodes are identical nested-virt guests on one host.
+evictionStrategy: LiveMigrate
+
+migrations:
+  allowAutoConverge: true
+  parallelMigrationsPerCluster: 2
+  parallelOutboundMigrationsPerNode: 1
+
+# Nested virt is live on the PVE host (kvm_intel/kvm_amd nested=1) and the
+# Talos VMs run --cpu host, so /dev/kvm is real. Flip to true only if that
+# ever stops being true — software emulation still exercises the API surface
+# and admission webhooks, just far too slowly to boot guests comfortably.
+useEmulation: false

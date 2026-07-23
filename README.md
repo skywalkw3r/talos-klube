@@ -23,8 +23,11 @@ its scripts live on in git history.)
 - **Argo CD 3.x** (chart 10.x) — app-of-apps rooted at
   [app/charts/root-app](app/charts/root-app); per-cluster behavior via
   values overlays ([values-proxmox.yaml](app/charts/root-app/values-proxmox.yaml)).
-- **kube-prometheus-stack**, **cert-manager 1.21**, **Rook-Ceph 1.20**
-  (consumes each node's blank second disk).
+- **kube-prometheus-stack**, **cert-manager 1.21**, **Rook-Ceph 1.19**
+  (consumes each node's blank second disk; pinned to 1.19.x — see
+  [values.yaml](app/charts/root-app/values.yaml)).
+- **KubeVirt 1.8 + CDI 1.65** — nested-virt VM workloads; see
+  [the KubeVirt lab notes](docs/kubevirt-lab.md).
 
 ## Deployment flow
 
@@ -103,6 +106,23 @@ Teardown: `./proxmox.sh destroy`
 - App toggles and chart versions live in
   [values.yaml](app/charts/root-app/values.yaml); per-cluster overlay
   files (e.g. `values-proxmox.yaml`) carry any divergence.
+
+## KubeVirt lab
+
+KubeVirt v1.8.4 and CDI v1.65.0 install as two more Argo Applications, each
+vendoring its pinned upstream release manifest (`app/charts/vendor.sh`) with the
+driving CR in sync wave 1. Together they turn the cluster into a nested-virt VM
+platform — useful for anything that needs real VMs under Kubernetes.
+
+The PVE host has `nested=1` and the VMs run `--cpu host`, so `/dev/kvm`,
+`vhost-net` and `vhost-vsock` are all real inside the Talos guests: hardware
+acceleration, not software emulation.
+
+Two traps are worth knowing before syncing — the KubeVirt CRD is 462 KB against
+a 262 KB apply ceiling (so `ServerSideApply` is mandatory), and CDI's upstream
+namespace lacks the privileged PSA label Talos needs. Both are handled in the
+charts and explained in **[docs/kubevirt-lab.md](docs/kubevirt-lab.md)** ·
+diagram [docs/kubevirt-lab.mmd](docs/kubevirt-lab.mmd).
 
 ## TODO (OCP-parity backlog)
 

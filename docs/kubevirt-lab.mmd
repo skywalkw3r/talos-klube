@@ -1,0 +1,76 @@
+%%{init: {"theme":"base","themeVariables":{"fontFamily":"ui-sans-serif, system-ui, sans-serif","fontSize":"14px","primaryColor":"#1c2733","primaryTextColor":"#e6edf3","primaryBorderColor":"#3d5266","lineColor":"#7d8590","clusterBkg":"#10161d","clusterBorder":"#30363d","edgeLabelBackground":"#10161d"},"flowchart":{"curve":"basis","nodeSpacing":40,"rankSpacing":55}}}%%
+flowchart TD
+
+    %% ================= SOURCE =================
+    subgraph OVIRT["🗄️ &nbsp;Source oVirt engine — read from, never written to"]
+        INV["<b>Realistic inventory</b><br/>clusters · storage domains · networks<br/>affinity groups · custom properties<br/><i>the part that is genuinely hard to fake</i>"]
+        RO["<b>Read-only client wrapper</b><br/>type exposes GET only — no POST/PUT/DELETE<br/><i>structural, not conventional:</i><br/><i>no refactor can grow a write</i>"]
+        RED["<b>Redaction at capture time</b><br/><i>built into the dump tool,</i><br/><i>not a later scrub step</i>"]
+        INV --> RO --> RED
+    end
+
+    %% ================= DEV =================
+    subgraph DEV["💻 &nbsp;Development machine — no VMs run here"]
+        DUMP["<b>ovirt-dump</b><br/>walks the REST API ⟶ testdata/"]
+        FIX["<b>testdata/*.json</b><br/>real clusters, real awkward VMs<br/><i>oVirt not running</i>"]
+        T0["<b>TIER 0 — envtest</b><br/>apiserver + etcd, no kubelet<br/>reconcile logic · finalizers · conditions<br/>oVirt ⟶ KubeVirt spec mapping<br/><i>seconds · runs in CI</i>"]
+        CRDS["<b>test/crds/</b> — KubeVirt CRDs<br/><i>vendored at the same pinned release</i><br/><i>the cluster runs</i>"]
+        RUN["<b>make run</b> — out-of-cluster<br/>binary runs natively + debugger<br/><i>no image build/push cycle</i>"]
+        DUMP --> FIX --> T0
+        CRDS --> T0
+        T0 --> RUN
+    end
+    RED -- "GET only" --> DUMP
+
+    %% ================= PVE =================
+    subgraph PVE["🖥️ &nbsp;Proxmox VE 9.2.5 host — a hypervisor in its own right"]
+        NEST["<b>kvm_amd nested=1</b> ✓ already enabled<br/><i>no modprobe change required</i>"]
+        VMS["<b>3 × Talos guests</b><br/><b>--cpu host</b> ⟶ exposes AMD-V to the guest<br/>8 vCPU · 24 GB · 40G OS + 100G Ceph each"]
+        NEST --> VMS
+    end
+
+    %% ================= NESTED PROOF =================
+    subgraph PROOF["🔬 &nbsp;Verified inside the guest — what makes the lab faithful"]
+        KVM["<b>/dev/kvm</b> present · crw-rw-rw-"]
+        VHOST["<b>/dev/vhost-net · /dev/vhost-vsock</b><br/><i>real NIC offload + guest-agent channel</i>"]
+        FLAG["<b>svm</b> in /proc/cpuinfo<br/><i>hardware acceleration, not emulation</i>"]
+        NOTE["<i>CDI and KubeVirt both ship arm64 —</i><br/><i>what rules out a laptop is KVM availability,</i><br/><i>not image architecture</i>"]
+    end
+    VMS --> KVM
+
+    %% ================= CLUSTER =================
+    subgraph K8S["☸️ &nbsp;klube-pmx — Talos v1.13.6 · k8s v1.36.2 · 3 control-plane, untainted"]
+        ARGO["<b>Argo CD app-of-apps</b><br/>root-app ⟶ one Application per component"]
+        KVCHART["<b>app/charts/kubevirt</b><br/>vendored operator.yaml (wave 0)<br/>+ KubeVirt CR (wave 1)<br/><i>ServerSideApply — CRD is 462 KB</i><br/><i>vs the 262 KB apply ceiling</i>"]
+        CDICHART["<b>app/charts/cdi</b><br/>vendored operator.yaml (wave 0)<br/>+ CDI CR (wave 1)<br/><i>PSA label injected by vendor.sh</i>"]
+        CEPH["<b>Rook-Ceph 1.19.7</b><br/>ceph-block RBD (default) — CDI scratch + VM disks<br/>ceph-filesystem RWX — vTPM/NVRAM state<br/><i>migration needs RWX + Block requested explicitly</i>"]
+        NS["<b>vm-lab namespace</b><br/>PSA enforce=privileged<br/><i>insurance for virt-launcher,</i><br/><i>the pod type with elevated needs</i>"]
+        ARGO --> KVCHART
+        ARGO --> CDICHART
+        KVCHART --> NS
+        CDICHART --> NS
+    end
+    KVM --> ARGO
+    RUN -- "kubeconfig" --> ARGO
+
+    %% ================= TIERS =================
+    subgraph TIERS["🎯 &nbsp;What each tier actually catches"]
+        T1["<b>TIER 1 — real KubeVirt</b><br/>admission webhooks rejecting specs<br/>RBAC gaps · packaging<br/><i>needs NO nested virt — pure API surface</i><br/><i>this is the 'passed tests, failed in cluster' gap</i>"]
+        T2["<b>TIER 2 — booting guests</b><br/>CDI disk import · does it boot<br/>live migration across 3 nodes<br/><i>the only tier that needs /dev/kvm</i>"]
+        T3["<b>Why 3 nodes, not 1</b><br/>affinity-group mapping is UNTESTABLE<br/>on a single node, and it is one of<br/>the things the tool must assess"]
+        T1 --> T2 --> T3
+    end
+    NS --> T1
+    CEPH --> T2
+
+    %% ================= PAYOFF =================
+    PAYOFF["<b>The payoff loop</b><br/>assessment says 'this VM translates cleanly'<br/>⟶ import the disk ⟶ boot it ⟶ confirm<br/><i>the difference between a report generator</i><br/><i>and something a stranger mid-migration would trust</i>"]
+    T3 --> PAYOFF
+    PAYOFF -. "findings feed back" .-> T0
+
+    classDef proof fill:#0f2419,stroke:#2ea043,color:#e6edf3
+    classDef care fill:#2d1618,stroke:#f85149,color:#e6edf3
+    classDef payoff fill:#161b22,stroke:#d29922,color:#e6edf3
+    class KVM,VHOST,FLAG,NOTE,NEST proof
+    class RO,RED,NS care
+    class PAYOFF payoff

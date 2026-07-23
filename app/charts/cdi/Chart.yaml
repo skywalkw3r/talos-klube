@@ -1,0 +1,9 @@
+apiVersion: v2
+name: cdi
+version: 1.0.0
+description: |
+  Containerized Data Importer — the disk-import path. Operator manifest is
+  vendored verbatim from the pinned upstream release by ./vendor.sh; the CDI CR
+  below drives it. This is the component that makes the lab able to *verify* a
+  migration assessment rather than only report one: import an oVirt disk, boot
+  it, confirm the assessment was right.
