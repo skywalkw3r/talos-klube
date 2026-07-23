@@ -11,6 +11,39 @@ spec:
     repoURL: https://kubernetes-sigs.github.io/headlamp/
     chart: headlamp
     targetRevision: {{ .Values.versions.headlamp }}
+    {{- with .Values.headlampPlugins }}
+    {{- if .kubevirt.enabled }}
+    helm:
+      values: |
+        # KubeVirt plugin — turns Headlamp's generic custom-resource browser
+        # into a real virtualization UI: VM lifecycle, VNC/serial console, live
+        # migration, DataVolume creation. Delivered the standard way, an
+        # initContainer copying the built plugin into a shared emptyDir that
+        # Headlamp reads via its --plugins-dir flag.
+        #
+        # Pinned by DIGEST rather than tag, deliberately: this project ships no
+        # semver image tags at all — only 'latest', 'main' and sha-<commit>.
+        # Its GitHub release v0.2.2 has no corresponding image. A moving
+        # 'latest' in a GitOps repo means the running bits can change with no
+        # commit to show for it: irreproducible, and a supply-chain hole. The
+        # digest is immutable. Re-resolve only when intentionally upgrading:
+        #   crane digest ghcr.io/naval-group/headlamp-kubevirt:latest
+        initContainers:
+        - name: kubevirt-plugin
+          image: {{ .kubevirt.image }}@{{ .kubevirt.digest }}
+          command: ["/bin/sh", "-c"]
+          args: ["cp -r /plugins/kubevirt /headlamp-plugins/"]
+          volumeMounts:
+          - name: headlamp-plugins
+            mountPath: /headlamp-plugins
+        volumeMounts:
+        - name: headlamp-plugins
+          mountPath: /headlamp/plugins
+        volumes:
+        - name: headlamp-plugins
+          emptyDir: {}
+    {{- end }}
+    {{- end }}
   destination:
     server: https://kubernetes.default.svc
     namespace: headlamp

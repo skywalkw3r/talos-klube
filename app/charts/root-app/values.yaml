@@ -21,6 +21,15 @@ apps:
   rookCephCluster: true
   trivyOperator: true
 
+# Headlamp UI plugins. Side-loaded by initContainer; see templates/headlamp.yaml.
+headlampPlugins:
+  kubevirt:
+    enabled: true
+    image: ghcr.io/naval-group/headlamp-kubevirt
+    # Immutable digest of :latest as resolved 2026-07-23. Upstream publishes no
+    # semver image tags, so there is nothing better to pin to.
+    digest: sha256:7cdff58fdda4f3ad7b7a208b83744ec82648795056cf726f0ce5df2501ee3d14
+
 versions:
   # KubeVirt/CDI manifests are vendored into their charts by
   # app/charts/vendor.sh, so these are documentation of the pinned release
