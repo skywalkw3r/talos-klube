@@ -15,6 +15,24 @@ spec:
     {{- if .kubevirt.enabled }}
     helm:
       values: |
+        # ---- RBAC: do NOT run this pod as cluster-admin ----
+        # The chart's default is clusterRoleBinding.clusterRoleName=cluster-admin,
+        # which is both unnecessary and dangerous here.
+        #
+        # Unnecessary: Headlamp authenticates each user with the token THEY paste
+        # and proxies with it. Its own ServiceAccount needs no cluster access —
+        # confirmed by the API returning 401 for an unauthenticated proxy call.
+        #
+        # Dangerous: automountServiceAccountToken injects that token into EVERY
+        # container in the pod, including initContainers. The KubeVirt plugin
+        # below is a third-party image, and `command: [/bin/sh, -c]` runs THEIR
+        # /bin/sh — the `cp` in args constrains nothing. A trojanned image could
+        # read a cluster-admin token, use it, and still perform the copy so the
+        # pod looks healthy. Defence in depth: remove the binding AND the token.
+        clusterRoleBinding:
+          create: false
+        automountServiceAccountToken: false
+
         # KubeVirt plugin — turns Headlamp's generic custom-resource browser
         # into a real virtualization UI: VM lifecycle, VNC/serial console, live
         # migration, DataVolume creation. Delivered the standard way, an
