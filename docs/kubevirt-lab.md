@@ -197,12 +197,50 @@ Rook-Ceph 1.19.7 provides all three classes this lab needs:
 | `ceph-filesystem` | CephFS (RWX) | persistent vTPM / EFI NVRAM state |
 | `ceph-bucket` | RGW | — |
 
-**Live migration is possible here, but not automatic.** It requires the VM's
-root disk to be `ReadWriteMany`, which means explicitly requesting
-`accessModes: [ReadWriteMany]` *and* `volumeMode: Block` on the DataVolume —
-RBD supports it, but the defaults do not give it to you. Three nodes plus that
-setting is what makes migration testable at all; a single-node lab could not
-test it under any configuration.
+### Use Filesystem mode, not Block — verified the hard way
+
+`volumeMode: Block` on `ceph-block` **does not work with CDI here.** The
+importer fails with `blockdev: cannot open /dev/cdi-block-volume: Permission
+denied`, and the cause is structural rather than a misconfiguration:
+
+- the RBD device nodes are `rw-------`, **root:root mode 0600**
+- CDI's importer runs as **UID 107, `runAsNonRoot: true`, `capabilities: drop
+  [ALL]`** — it is far more constrained than older CDI
+- its pod sets **no `fsGroup`**, and Kubernetes does not apply `fsGroup` to raw
+  block volumes anyway
+- the CDI CR exposes **no securityContext knob** to change any of it
+
+Not a PSA problem (the namespace *is* privileged) and not SELinux
+(`/sys/fs/selinux/enforce` is `0`). There is no fix available from the CR.
+
+`volumeMode: Filesystem` works, and is what to use. Both of these imported
+cleanly end to end — download, qcow2 → raw conversion, PVC populated:
+
+| accessModes | volumeMode | class | result |
+|---|---|---|---|
+| `ReadWriteOnce` | `Filesystem` | `ceph-block` | ✅ Succeeded |
+| `ReadWriteMany` | `Filesystem` | `ceph-filesystem` | ✅ Succeeded |
+| `ReadWriteOnce` | `Block` | `ceph-block` | ❌ Permission denied |
+
+### Live migration works — proven, and it does not need Block
+
+A VM booted from the RWX/CephFS import above **live-migrated from
+`klube-pmx-m2` to `klube-pmx-m1` while running**, PreCopy, completing in
+seconds. That settles the question a single-node lab could never answer, and
+it disproves the common assumption that nested virt forecloses migration.
+
+Two requirements, and neither is `volumeMode: Block`:
+
+1. **RWX storage** — `accessModes: [ReadWriteMany]` on `ceph-filesystem`.
+2. **`masquerade` interface binding.** This one is easy to miss. A VM with the
+   default bridge binding reports
+   `LiveMigratable=False / InterfaceNotLiveMigratable` and simply cannot move.
+   The VM must declare `interfaces: [{name: default, masquerade: {}}]` with a
+   `pod: {}` network.
+
+That second point is a real constraint for anything generating KubeVirt specs
+from oVirt inventory: **a spec that omits masquerade binding produces a VM that
+can never be migrated**, and nothing about the import or the boot will warn you.
 
 Since the Talos nodes themselves run SecureBoot + vTPM, assessing oVirt VMs that
 carry a vTPM is also on the table — enable the `VMPersistentState` feature gate

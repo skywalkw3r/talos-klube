@@ -43,7 +43,7 @@ flowchart TD
         ARGO["<b>Argo CD app-of-apps</b><br/>root-app ⟶ one Application per component"]
         KVCHART["<b>app/charts/kubevirt</b><br/>vendored operator.yaml (wave 0)<br/>+ KubeVirt CR (wave 1)<br/><i>ServerSideApply — CRD sits at 91%</i><br/><i>of the 262 KB apply ceiling</i>"]
         CDICHART["<b>app/charts/cdi</b><br/>vendored operator.yaml (wave 0)<br/>+ CDI CR (wave 1)<br/><i>PSA label injected by vendor.sh</i>"]
-        CEPH["<b>Rook-Ceph 1.19.7</b><br/>ceph-block RBD (default) — CDI scratch + VM disks<br/>ceph-filesystem RWX — vTPM/NVRAM state<br/><i>migration needs RWX + Block requested explicitly</i>"]
+        CEPH["<b>Rook-Ceph 1.19.7</b><br/>ceph-block RBD (default) — CDI scratch + VM disks<br/>ceph-filesystem RWX — vTPM/NVRAM state<br/><i>live migration verified: RWX CephFS + masquerade binding</i>"]
         NS["<b>vm-lab namespace</b><br/>PSA enforce=privileged<br/><i>insurance for virt-launcher,</i><br/><i>the pod type with elevated needs</i>"]
         ARGO --> KVCHART
         ARGO --> CDICHART
