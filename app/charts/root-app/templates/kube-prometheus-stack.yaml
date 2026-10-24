@@ -1,0 +1,35 @@
+{{- if .Values.apps.kubePrometheusStack }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kube-prometheus-stack
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: kube-prometheus-stack
+    targetRevision: {{ .Values.versions.kubePrometheusStack }}
+    helm:
+      values: |
+        prometheus:
+          prometheusSpec:
+            # pick up all ServiceMonitors/PodMonitors cluster-wide
+            # (e.g. Cilium/Hubble once their serviceMonitors are enabled)
+            serviceMonitorSelectorNilUsesHelmValues: false
+            podMonitorSelectorNilUsesHelmValues: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: monitoring
+  syncPolicy:
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+    - ServerSideApply=true
+{{- end }}

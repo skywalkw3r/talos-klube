@@ -1,0 +1,31 @@
+{{- if .Values.apps.certManager }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cert-manager
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://charts.jetstack.io
+    chart: cert-manager
+    targetRevision: {{ .Values.versions.certManager }}
+    helm:
+      values: |
+        crds:
+          enabled: true
+        config:
+          apiVersion: controller.config.cert-manager.io/v1alpha1
+          kind: ControllerConfiguration
+          enableGatewayAPI: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cert-manager
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+{{- end }}

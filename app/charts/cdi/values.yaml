@@ -1,0 +1,27 @@
+# Scratch space is where CDI stages a conversion (qcow2 -> raw, decompress,
+# etc.) before writing the target PVC. It needs a class that can provision
+# fast RWO block; ceph-block is the cluster default.
+scratchSpaceStorageClass: ceph-block
+
+# HonorWaitForFirstConsumer keeps CDI from provisioning ahead of the scheduler
+# when a StorageClass uses WaitForFirstConsumer binding. ceph-block is
+# Immediate today, so this is inert — but it stays correct if that changes.
+featureGates:
+- HonorWaitForFirstConsumer
+
+# Fraction of a filesystem PVC reserved for filesystem metadata, so CDI sizes
+# the volume large enough to hold the image. CDI's own default is 0.055 — left
+# explicit here as documentation rather than as a change. Raise it only if real
+# imports actually come up short; lowering it is what causes "no space left"
+# partway through a conversion.
+filesystemOverhead:
+  global: "0.055"
+
+# Upload/import pods are short-lived but memory-hungry during conversion.
+podResourceRequirements:
+  requests:
+    cpu: "100m"
+    memory: "60M"
+  limits:
+    cpu: "2"
+    memory: "2Gi"

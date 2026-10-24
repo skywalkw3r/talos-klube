@@ -1,0 +1,52 @@
+# Modern-stack defaults (Cilium for everything). Per-cluster overlays can
+# flip toggles/versions; selfValueFiles controls which values files the
+# self-managing root-app Application passes to itself (empty -> this file).
+selfValueFiles: []
+
+apps:
+  bitwarden: false        # re-enable once storage + SMTP are wired to the new cluster
+  cdi: true              # disk import; pairs with kubevirt
+  cephCsiDrivers: true   # RBD/CephFS CSI drivers; required by Rook >= 1.20
+  certManager: true
+  cilium: true
+  kubevirt: true
+  externalSecrets: true
+  gatewayApiCrds: true
+  headlamp: true
+  issuers: true
+  keycloak: true
+  kubePrometheusStack: true
+  metricsServer: true
+  rbac: true
+  rookCeph: true
+  rookCephCluster: true
+  trivyOperator: true
+
+# Headlamp UI plugins. Side-loaded by initContainer; see templates/headlamp.yaml.
+headlampPlugins:
+  kubevirt:
+    enabled: true
+    image: ghcr.io/naval-group/headlamp-kubevirt
+    # Immutable digest of :latest as resolved 2026-07-23. Upstream publishes no
+    # semver image tags, so there is nothing better to pin to.
+    digest: sha256:7cdff58fdda4f3ad7b7a208b83744ec82648795056cf726f0ce5df2501ee3d14
+
+versions:
+  # KubeVirt/CDI manifests are vendored into their charts by
+  # app/charts/vendor.sh, so these are documentation of the pinned release
+  # rather than a chart reference. Keep them in step with what was vendored.
+  kubevirt: v1.9.1
+  cdi: v1.66.1
+  cephCsiDrivers: 1.1.0
+  certManager: v1.21.3
+  externalSecrets: 2.14.0
+  gatewayApi: v1.6.3
+  headlamp: 0.46.0
+  keycloakx: 7.4.0
+  kubePrometheusStack: 92.13.1
+  metricsServer: 3.14.0
+  # Since 1.20 Rook leaves the CSI drivers to ceph-csi-operator: the Driver
+  # CRs come from the ceph-csi-drivers app. Existing clusters must step
+  # through 1.20.x — Rook doesn't support skipping a minor.
+  rookCeph: v1.21.0
+  trivyOperator: 0.37.0

@@ -1,0 +1,35 @@
+{{- if .Values.apps.rookCephCluster }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rook-ceph-cluster
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://charts.rook.io/release
+    chart: rook-ceph-cluster
+    targetRevision: {{ .Values.versions.rookCeph }}
+    helm:
+      values: |
+        operatorNamespace: rook-ceph
+        toolbox:
+          enabled: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rook-ceph
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+    # ceph.rook.io CRDs come from the rook-ceph app, syncing in parallel —
+    # skip their dry-run and retry until the operator has installed them.
+    - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 15s
+        factor: 2
+{{- end }}

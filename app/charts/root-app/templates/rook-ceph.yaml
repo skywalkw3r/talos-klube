@@ -1,0 +1,38 @@
+{{- if .Values.apps.rookCeph }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: rook-ceph
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://charts.rook.io/release
+    chart: rook-ceph
+    targetRevision: {{ .Values.versions.rookCeph }}
+    helm:
+      values: |
+        # 1.21.0's values.yaml omits this key, which renders an empty
+        # ROOK_CREATE_CSI_OPERATOR_RESOURCES — the operator then treats it
+        # as disabled and never creates CephConnection/ClientProfile CRs.
+        csi:
+          createCsiOperatorResources: true
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rook-ceph
+  syncPolicy:
+    managedNamespaceMetadata:
+      labels:
+        pod-security.kubernetes.io/enforce: privileged
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+    # The ceph-csi-operator subchart ships Driver/OperatorConfig CRDs whose
+    # schemas exceed the 262KB client-side apply annotation limit — without
+    # SSA those two CRDs silently fail to install and the CSI operator
+    # crashloops (cache sync on missing kinds).
+    - ServerSideApply=true
+{{- end }}

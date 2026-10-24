@@ -1,0 +1,31 @@
+{{- if .Values.apps.cilium }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cilium
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/skywalkw3r/talos-klube.git
+    path: app/charts/cilium
+    targetRevision: main
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kube-system
+  syncPolicy:
+    automated:
+      prune: false        # never auto-prune the CNI
+      selfHeal: true
+    syncOptions:
+    - ServerSideApply=true
+    # ServiceMonitors need kube-prometheus-stack's CRDs, which a fresh
+    # cluster doesn't have yet — skip their dry-run and retry until it does.
+    - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 15s
+        factor: 2
+{{- end }}

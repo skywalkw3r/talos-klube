@@ -1,0 +1,42 @@
+# Cluster-wide machine config patch — safe to commit (no secrets).
+# Applied by talos/gen-config.sh on top of `talosctl gen config` output.
+# Talos 1.14 emits Kubernetes/resolver settings as separate documents, and
+# setting the legacy v1alpha1 field alongside one is rejected — so each
+# setting patches its document here.
+#
+# No CNI: Cilium is installed by bootstrap.sh / Argo CD
+apiVersion: v1alpha1
+kind: KubeFlannelCNIConfig
+$patch: delete
+---
+# kube-proxy replaced by Cilium eBPF
+apiVersion: v1alpha1
+kind: KubeProxyConfig
+$patch: delete
+---
+# Workloads schedule on the control planes (converged 3-node cluster):
+# replace the generated KubeNodeConfig with the same labels but without
+# the control-plane NoSchedule taint (a taint key can't be deleted by
+# path — it contains dots).
+apiVersion: v1alpha1
+kind: KubeNodeConfig
+$patch: delete
+---
+apiVersion: v1alpha1
+kind: KubeNodeConfig
+nodeIP: {}
+labels:
+  node-role.kubernetes.io/control-plane: ""
+  node.kubernetes.io/exclude-from-external-load-balancers: ""
+---
+apiVersion: v1alpha1
+kind: ResolverConfig
+hostDNS:
+  enabled: true
+  # Must be false with Cilium bpf.masquerade — the host-forwarded
+  # kube-dns path breaks under eBPF masquerading.
+  forwardKubeDNSToHost: false
+# NOTE: disk encryption (VolumeConfig STATE/EPHEMERAL) is emitted by
+# gen-config.sh (TPM-sealed keys when SECUREBOOT=1, nodeID keys otherwise).
+# It must live in ONE patch only — key lists merge by appending, and two
+# keys claiming the same LUKS slot fail validation.

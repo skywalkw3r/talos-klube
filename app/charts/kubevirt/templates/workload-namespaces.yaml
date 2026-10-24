@@ -1,0 +1,24 @@
+{{- /*
+  Namespaces where VMs and DataVolumes actually live.
+
+  Talos enforces Pod Security Admission at 'baseline' by default, which is below
+  what virt-launcher — the pod that wraps a running VM — needs. Labelling the
+  `kubevirt` and `cdi` namespaces is not enough, because virt-launcher and CDI's
+  importer pods both run in the *workload* namespace, not the operators' ones.
+
+  Note this is aimed at virt-launcher. Modern CDI importer pods are far more
+  constrained than they once were, so do not read this label as the fix for a
+  specific import failure.
+*/ -}}
+{{- range .Values.workloadNamespaces }}
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ . }}
+  labels:
+    pod-security.kubernetes.io/enforce: privileged
+    pod-security.kubernetes.io/audit: privileged
+    pod-security.kubernetes.io/warn: privileged
+    kubevirt.io/workload: "true"
+{{- end }}

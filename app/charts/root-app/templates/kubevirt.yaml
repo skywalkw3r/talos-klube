@@ -1,0 +1,35 @@
+{{- if .Values.apps.kubevirt }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kubevirt
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/skywalkw3r/talos-klube.git
+    path: app/charts/kubevirt
+    targetRevision: main
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kubevirt
+  syncPolicy:
+    automated:
+      # Never prune. Removing the KubeVirt CR tears down virt-handler and every
+      # running VM with it; that should be a deliberate act, not a sync effect.
+      prune: false
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+    # The kubevirts.kubevirt.io CRD minifies to ~239 KB against the 262,144-byte
+    # client-side-apply annotation ceiling — 91% of it, with only one direction
+    # of travel as upstream adds fields. Same reasoning that already forced SSA
+    # for rook-ceph's CSI CRDs; prudent here rather than strictly required yet.
+    - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 15s
+        factor: 2
+{{- end }}

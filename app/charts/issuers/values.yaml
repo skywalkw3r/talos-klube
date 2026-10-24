@@ -1,0 +1,38 @@
+# Cluster certificate issuers. Everything references issuers by NAME
+# (annotate Gateways with cert-manager.io/cluster-issuer: internal-ca),
+# so changing WHO signs is a spec swap here — apps never change.
+
+internalCA:
+  enabled: true
+  commonName: klube-internal-ca
+  duration: 87600h        # 10y root; leaf certs default to 90d and auto-renew
+  # Trust it once per workstation:
+  #   kubectl -n cert-manager get secret internal-ca-root \
+  #     -o jsonpath='{.data.ca\.crt}' | base64 -d > internal-ca.crt
+
+# Future: corporate PKI via Venafi (TLS Protect Datacenter / TPP).
+# Two migration paths, in order of preference:
+#   1. Keep the `internal-ca` issuer name but replace its `ca:` spec with
+#      this `venafi:` spec — zero changes anywhere else.
+#   2. Enable this as a separate `venafi-tpp` issuer and re-annotate
+#      Gateways one at a time.
+# Prereq: an access-token Secret in the cert-manager namespace, created
+# out-of-band (never committed):
+#   kubectl -n cert-manager create secret generic venafi-tpp-token \
+#     --from-literal=access-token=<token>
+venafi:
+  enabled: false
+  zone: ""                # e.g. TLS/Certificates\klube  (policy folder in TPP)
+  tppUrl: ""              # e.g. https://tpp.example.com/vedsdk
+  credentialsSecret: venafi-tpp-token
+  # For Venafi-as-a-Service instead of TPP, swap tpp: for
+  # cloud: { apiTokenSecretRef: ... } in templates/venafi.yaml.
+
+# ACME/Let's Encrypt — kept for future PUBLIC-facing use. Requires a
+# publicly resolvable zone and a reachable solver; internal lab VLANs
+# cannot satisfy HTTP-01, hence disabled.
+letsencrypt:
+  enabled: false
+  email: ""               # required by Let's Encrypt when enabled
+  gatewayName: ""         # Gateway the HTTP-01 solver routes attach to
+  gatewayNamespace: ""

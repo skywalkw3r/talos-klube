@@ -1,0 +1,5 @@
+# Proxmox cluster overlay. Defaults already describe the modern stack;
+# this file keeps the cluster's root-app on a stable valueFiles reference
+# so per-cluster divergence stays a one-file change.
+selfValueFiles:
+  - values-proxmox.yaml

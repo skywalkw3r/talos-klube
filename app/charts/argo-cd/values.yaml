@@ -1,0 +1,11 @@
+argo-cd:
+  dex:
+    enabled: false
+  notifications:
+    enabled: false
+  applicationSet:
+    enabled: false
+  configs:
+    params:
+      # TLS terminates at the edge (Gateway/Ingress); server speaks HTTP.
+      server.insecure: true

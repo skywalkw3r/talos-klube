@@ -1,0 +1,39 @@
+# Namespaces that hold VMs and DataVolumes. Created with privileged PSA
+# because CDI runs its importer pods in the target DataVolume's namespace,
+# not in `cdi` — see templates/workload-namespaces.yaml.
+workloadNamespaces:
+- vm-lab
+
+# Feature gates. Empty by default because none are needed yet — an empty list
+# keeps the CR honest about what this cluster actually depends on. (GA'd gates
+# stay registered and are no-ops if named; deprecated ones emit warnings.)
+# Add only what a given experiment needs.
+#   VMPersistentState — persistent EFI NVRAM + vTPM state. Needed to assess
+#                       oVirt VMs that carry a vTPM. Requires vmStateStorageClass
+#                       to be RWX (ceph-filesystem), not RWO.
+#   VMExport          — export a VM's disks over HTTP.
+featureGates: []
+
+# RWX filesystem class backing persistent vTPM/NVRAM. Only consulted when
+# VMPersistentState is enabled above.
+vmStateStorageClass: ceph-filesystem
+
+# Cluster-level behaviour when a node drains. Deliberately NOT plain
+# "LiveMigrate": that blocks the drain indefinitely for any VMI that cannot
+# migrate — a containerDisk VM, or any disk that is not RWX — which would hang
+# `talosctl upgrade` and every rolling node operation on this cluster.
+# "LiveMigrateIfPossible" migrates what can migrate and shuts down the rest, so
+# a drain always completes. Set to "" to omit the field and leave each VM to
+# decide for itself.
+evictionStrategy: LiveMigrateIfPossible
+
+migrations:
+  allowAutoConverge: true
+  parallelMigrationsPerCluster: 2
+  parallelOutboundMigrationsPerNode: 1
+
+# Nested virt is live on the PVE host (kvm_intel/kvm_amd nested=1) and the
+# Talos VMs run --cpu host, so /dev/kvm is real. Flip to true only if that
+# ever stops being true — software emulation still exercises the API surface
+# and admission webhooks, just far too slowly to boot guests comfortably.
+useEmulation: false

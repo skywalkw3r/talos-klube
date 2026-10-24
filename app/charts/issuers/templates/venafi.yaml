@@ -1,0 +1,13 @@
+{{- if .Values.venafi.enabled }}
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: venafi-tpp
+spec:
+  venafi:
+    zone: {{ .Values.venafi.zone | quote }}
+    tpp:
+      url: {{ .Values.venafi.tppUrl }}
+      credentialsRef:
+        name: {{ .Values.venafi.credentialsSecret }}
+{{- end }}

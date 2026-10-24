@@ -1,0 +1,60 @@
+{{- if .Values.apps.cephCsiDrivers }}
+# Since Rook 1.20 the operator no longer deploys the CSI drivers itself: the
+# ceph-csi-operator (a rook-ceph subchart) runs them from Driver and
+# OperatorConfig CRs, which this chart provides. Without it the RBD/CephFS
+# provisioners never start and every ceph-block/ceph-filesystem PVC hangs.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: ceph-csi-drivers
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://ceph.github.io/ceph-csi-operator
+    chart: ceph-csi-drivers
+    targetRevision: {{ .Values.versions.cephCsiDrivers }}
+    helm:
+      # Rook's recommended values: driver names must match the provisioners
+      # rook-ceph-cluster's storage classes reference, and nfs/nvmeof stay off.
+      values: |
+        operatorConfig:
+          namespace: rook-ceph
+          driverSpecDefaults:
+            imageSet:
+              name: rook-csi-operator-image-set-configmap
+            nodePlugin:
+              priorityClassName: system-node-critical
+            controllerPlugin:
+              priorityClassName: system-cluster-critical
+        drivers:
+          rbd:
+            enabled: true
+            name: rook-ceph.rbd.csi.ceph.com
+          cephfs:
+            enabled: true
+            name: rook-ceph.cephfs.csi.ceph.com
+          nfs:
+            enabled: false
+            name: rook-ceph.nfs.csi.ceph.com
+          nvmeof:
+            enabled: false
+            name: rook-ceph.nvmeof.csi.ceph.com
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: rook-ceph
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+    # csi.ceph.io CRDs come from the rook-ceph app, syncing in parallel —
+    # skip their dry-run and retry until the operator has installed them.
+    - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 15s
+        factor: 2
+{{- end }}
