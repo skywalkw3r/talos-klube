@@ -41,22 +41,40 @@ harbor:
   registrySize: 100Gi
 
 versions:
+  # Each pin carries a `# renovate:` annotation naming its upstream, which a
+  # custom manager in /renovate.json reads; keep it directly above the key.
+  #
   # KubeVirt/CDI manifests are vendored into their charts by
   # app/charts/vendor.sh, so these are documentation of the pinned release
   # rather than a chart reference. Keep them in step with what was vendored.
+  # renovate: datasource=github-releases depName=kubevirt/kubevirt
   kubevirt: v1.9.1
+  # renovate: datasource=github-releases depName=kubevirt/containerized-data-importer
   cdi: v1.66.1
+  # renovate: datasource=helm depName=ceph-csi-drivers registryUrl=https://ceph.github.io/ceph-csi-operator
   cephCsiDrivers: 1.1.0
+  # renovate: datasource=helm depName=cert-manager registryUrl=https://charts.jetstack.io
   certManager: v1.21.3
+  # renovate: datasource=helm depName=external-secrets registryUrl=https://charts.external-secrets.io
   externalSecrets: 2.14.0
+  # renovate: datasource=github-releases depName=kubernetes-sigs/gateway-api
   gatewayApi: v1.6.3
-  harbor: 1.19.4         # Harbor v2.15.4
+  # Chart version; the Harbor app version it ships is in the chart's appVersion.
+  # renovate: datasource=helm depName=harbor registryUrl=https://helm.goharbor.io
+  harbor: 1.19.4
+  # renovate: datasource=helm depName=headlamp registryUrl=https://kubernetes-sigs.github.io/headlamp/
   headlamp: 0.46.0
+  # renovate: datasource=helm depName=keycloakx registryUrl=https://codecentric.github.io/helm-charts
   keycloakx: 7.4.0
+  # renovate: datasource=helm depName=kube-prometheus-stack registryUrl=https://prometheus-community.github.io/helm-charts
   kubePrometheusStack: 92.13.1
+  # renovate: datasource=helm depName=metrics-server registryUrl=https://kubernetes-sigs.github.io/metrics-server/
   metricsServer: 3.14.0
   # Since 1.20 Rook leaves the CSI drivers to ceph-csi-operator: the Driver
   # CRs come from the ceph-csi-drivers app. Existing clusters must step
-  # through 1.20.x — Rook doesn't support skipping a minor.
+  # through 1.20.x — Rook doesn't support skipping a minor. Drives both the
+  # rook-ceph and rook-ceph-cluster charts.
+  # renovate: datasource=helm depName=rook-ceph registryUrl=https://charts.rook.io/release
   rookCeph: v1.21.0
+  # renovate: datasource=helm depName=trivy-operator registryUrl=https://aquasecurity.github.io/helm-charts/
   trivyOperator: 0.37.0

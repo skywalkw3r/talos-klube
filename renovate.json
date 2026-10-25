@@ -1,0 +1,118 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": "Every Argo CD Application tracks main, so a merged bump goes live. Patches pool into one PR and automerge once validate passes; minor/major bumps get a PR per component and wait for a human. Rook, Talos and the vendored KubeVirt/CDI manifests never automerge.",
+  "extends": ["config:recommended", ":semanticCommits"],
+  "baseBranchPatterns": ["main"],
+  "labels": ["dependencies"],
+  "platformAutomerge": false,
+  "customManagers": [
+    {
+      "description": "root-app versions: map, one `# renovate:` annotation above each pin.",
+      "customType": "regex",
+      "managerFilePatterns": ["app/charts/root-app/values.yaml"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+)( registryUrl=(?<registryUrl>\\S+))?\\n\\s+\\w+: (?<currentValue>\\S+)"
+      ]
+    },
+    {
+      "description": "Headlamp KubeVirt plugin: digest of :latest (upstream publishes no semver tags).",
+      "customType": "regex",
+      "managerFilePatterns": ["app/charts/root-app/values.yaml"],
+      "matchStrings": [
+        "image: (?<depName>ghcr\\.io/naval-group/headlamp-kubevirt)\\n(\\s+#.*\\n)*\\s+digest: (?<currentDigest>sha256:[0-9a-f]{64})"
+      ],
+      "currentValueTemplate": "latest",
+      "datasourceTemplate": "docker"
+    },
+    {
+      "description": "Talos defaults: gen-config.sh / proxmox.sh `TALOS_VERSION:=`, env.example and the header examples, and the tofu talos_version variable.",
+      "customType": "regex",
+      "managerFilePatterns": ["talos/gen-config.sh", "talos/env.example", "proxmox.sh", "tofu/variables.tf"],
+      "matchStrings": [
+        "TALOS_VERSION:?=(?<currentValue>v\\d+\\.\\d+\\.\\d+)",
+        "variable \"talos_version\" \\{[^}]*?default\\s*=\\s*\"(?<currentValue>v\\d+\\.\\d+\\.\\d+)\""
+      ],
+      "depNameTemplate": "siderolabs/talos",
+      "datasourceTemplate": "github-releases"
+    },
+    {
+      "description": "Gateway API CRDs that bootstrap.sh installs before Cilium.",
+      "customType": "regex",
+      "managerFilePatterns": ["bootstrap.sh"],
+      "matchStrings": ["GATEWAY_API_VERSION:?=(?<currentValue>v\\d+\\.\\d+\\.\\d+)"],
+      "depNameTemplate": "kubernetes-sigs/gateway-api",
+      "datasourceTemplate": "github-releases"
+    },
+    {
+      "description": "vendor.sh KubeVirt default and its usage example.",
+      "customType": "regex",
+      "managerFilePatterns": ["app/charts/vendor.sh"],
+      "matchStrings": ["KUBEVIRT_VERSION:?=(?<currentValue>v\\d+\\.\\d+\\.\\d+)"],
+      "depNameTemplate": "kubevirt/kubevirt",
+      "datasourceTemplate": "github-releases"
+    },
+    {
+      "description": "vendor.sh CDI default.",
+      "customType": "regex",
+      "managerFilePatterns": ["app/charts/vendor.sh"],
+      "matchStrings": ["CDI_VERSION:?=(?<currentValue>v\\d+\\.\\d+\\.\\d+)"],
+      "depNameTemplate": "kubevirt/containerized-data-importer",
+      "datasourceTemplate": "github-releases"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Patches from every component share one PR and automerge after validate passes and the release is 7 days old.",
+      "matchUpdateTypes": ["patch"],
+      "groupName": "patch updates",
+      "automerge": true,
+      "minimumReleaseAge": "7 days"
+    },
+    {
+      "description": "A digest of a moving tag can be anything; review it like a minor.",
+      "matchUpdateTypes": ["digest"],
+      "automerge": false
+    },
+    {
+      "description": "Gateway API: the root-app CRD source and the bootstrap.sh CRD install move together.",
+      "matchDepNames": ["kubernetes-sigs/gateway-api"],
+      "matchUpdateTypes": ["minor", "major"],
+      "groupName": "Gateway API"
+    },
+    {
+      "description": "Rook: both charts follow versions.rookCeph. Never automerge, and Rook can't skip a minor, so each minor gets its own PR.",
+      "matchDepNames": ["rook-ceph"],
+      "groupName": "Rook",
+      "automerge": false,
+      "separateMultipleMinor": true
+    },
+    {
+      "description": "Talos: every default moves together. Never automerge; `talosctl upgrade` one minor at a time, so each minor gets its own PR.",
+      "matchDepNames": ["siderolabs/talos"],
+      "groupName": "Talos",
+      "automerge": false,
+      "separateMultipleMinor": true,
+      "prBodyNotes": [
+        "Bumping the defaults doesn't upgrade a running cluster: run `talosctl upgrade` node by node. Check that `kubernetes_version` in `tofu/variables.tf` still matches the new talosctl default."
+      ]
+    },
+    {
+      "description": "KubeVirt: vendor.sh default and versions.kubevirt move together. Never automerge: the vendored manifest only changes when vendor.sh runs.",
+      "matchDepNames": ["kubevirt/kubevirt"],
+      "groupName": "KubeVirt",
+      "automerge": false,
+      "prBodyNotes": [
+        "This only bumps the pins. Run `app/charts/vendor.sh` on this branch and commit `app/charts/kubevirt/templates/operator.yaml` before merging."
+      ]
+    },
+    {
+      "description": "CDI: vendor.sh default and versions.cdi move together. Never automerge: the vendored manifest only changes when vendor.sh runs.",
+      "matchDepNames": ["kubevirt/containerized-data-importer"],
+      "groupName": "CDI",
+      "automerge": false,
+      "prBodyNotes": [
+        "This only bumps the pins. Run `app/charts/vendor.sh` on this branch and commit `app/charts/cdi/templates/operator.yaml` before merging."
+      ]
+    }
+  ]
+}
