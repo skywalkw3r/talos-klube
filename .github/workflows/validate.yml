@@ -1,6 +1,6 @@
 # Offline checks for everything Argo CD and bootstrap.sh consume: Helm
-# renders, shell scripts, Talos machine configs and Mermaid diagrams. Each job
-# wraps a script in scripts/ci/ that also runs locally.
+# renders, shell scripts and Talos machine configs. Each job wraps a script in
+# scripts/ci/ that also runs locally.
 name: validate
 
 on:
@@ -22,7 +22,6 @@ env:
   SHELLCHECK_VERSION: v0.11.0
   # shellcheck-v0.11.0.linux.x86_64.tar.xz (upstream publishes no checksums)
   SHELLCHECK_SHA256: 8c3be12b05d5c177a04c29e3c78ce89ac86f1595681cab149b65b97c4e227198
-  MERMAID_CLI_VERSION: 12.0.0
   # talosctl follows the TALOS_VERSION default in talos/gen-config.sh
 
 jobs:
@@ -72,24 +71,3 @@ jobs:
         run: scripts/ci/install-tools.sh talosctl
       - name: Generate and validate machine configs (SecureBoot on/off, API DNS name set/unset)
         run: scripts/ci/talos-validate.sh
-
-  mermaid:
-    name: mermaid
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: 24
-      - name: Render docs/*.mmd and README.md diagrams
-        env:
-          OUT_DIR: ${{ runner.temp }}/diagrams
-        run: scripts/ci/mermaid-render.sh
-      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: diagrams
-          path: ${{ runner.temp }}/diagrams/*.svg
-          retention-days: 7
