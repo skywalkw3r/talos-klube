@@ -209,7 +209,8 @@ The OCP-parity backlog lives in
 [talos-klube project board](https://github.com/users/skywalkw3r/projects/1),
 grouped under the [v1.1.0 milestone](https://github.com/skywalkw3r/talos-klube/milestone/1):
 CI validation, Renovate, OIDC/SSO, SOPS-encrypted machine configs,
-Terraform provisioning, Velero, Loki, Kyverno and Harbor. New ideas go in via
-the feature request form; work branches from `dev`, PRs target `dev`, and
-`dev` merges to `main` for a tagged release.
+OpenTofu provisioning, Velero, Loki, Kyverno and Harbor. New ideas go in via
+the feature request form. Work happens on a branch per issue, PRs target
+`main`, and merging deploys: every Argo CD Application tracks `main`. Releases
+are tags on `main` (`v1.1.0`, …) once a milestone's work has landed.
 
