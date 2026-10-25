@@ -1,0 +1,9 @@
+# Site glue for the upstream Harbor chart, rendered as the second source
+# of the `harbor` Application (root-app templates/harbor.yaml) into the
+# same namespace. root-app passes `hostname` from its own harbor.hostname.
+
+# PLACEHOLDER — the real name is set per site (see docs/harbor.md).
+hostname: harbor.example.internal
+
+# Signs the Gateway's serving certificate (cert-manager gateway-shim).
+clusterIssuer: internal-ca

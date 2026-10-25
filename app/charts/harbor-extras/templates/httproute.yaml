@@ -1,0 +1,25 @@
+# Everything goes to Harbor's nginx (expose.type: clusterIP), which does
+# the portal/core/registry path split itself.
+#
+# Why not the chart's own `expose.type: route`: its HTTPRoute has no
+# timeouts field, and with none set Cilium leaves Envoy's default 15s
+# route timeout in place — measured from the end of the request to the
+# end of the response, so pulling any layer that takes longer than 15s
+# fails. `request: 0s` disables it; Envoy's stream idle timeout and
+# nginx's 900s proxy timeouts on /v2/ still catch stuck transfers.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: harbor
+spec:
+  parentRefs:
+  - name: harbor
+    sectionName: https
+  hostnames:
+  - {{ .Values.hostname | quote }}
+  rules:
+  - backendRefs:
+    - name: harbor
+      port: 80
+    timeouts:
+      request: 0s

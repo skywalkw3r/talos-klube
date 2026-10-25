@@ -12,6 +12,7 @@ apps:
   kubevirt: true
   externalSecrets: true
   gatewayApiCrds: true
+  harbor: false          # needs harbor-secrets + a site hostname first; docs/harbor.md
   headlamp: true
   issuers: true
   keycloak: true
@@ -31,6 +32,14 @@ headlampPlugins:
     # semver image tags, so there is nothing better to pin to.
     digest: sha256:7cdff58fdda4f3ad7b7a208b83744ec82648795056cf726f0ce5df2501ee3d14
 
+# Harbor registry (templates/harbor.yaml). hostname is a PLACEHOLDER: a
+# site's real name never lands in this public repo — set it per site
+# (docs/harbor.md). It drives externalURL, the Gateway listener and its
+# certificate, so clients must resolve it to the Gateway's LB IP.
+harbor:
+  hostname: harbor.example.internal
+  registrySize: 100Gi
+
 versions:
   # KubeVirt/CDI manifests are vendored into their charts by
   # app/charts/vendor.sh, so these are documentation of the pinned release
@@ -41,6 +50,7 @@ versions:
   certManager: v1.21.3
   externalSecrets: 2.14.0
   gatewayApi: v1.6.3
+  harbor: 1.19.4         # Harbor v2.15.4
   headlamp: 0.46.0
   keycloakx: 7.4.0
   kubePrometheusStack: 92.13.1

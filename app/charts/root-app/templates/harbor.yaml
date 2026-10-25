@@ -1,0 +1,92 @@
+{{- if .Values.apps.harbor }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: harbor
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  sources:
+  - repoURL: https://helm.goharbor.io
+    chart: harbor
+    targetRevision: {{ .Values.versions.harbor }}
+    helm:
+      values: |
+        # TLS terminates at the Gateway (harbor-extras); Harbor's nginx
+        # serves plain HTTP behind it and honours X-Forwarded-Proto.
+        expose:
+          type: clusterIP
+          tls:
+            enabled: false
+          clusterIP:
+            name: harbor
+        externalURL: https://{{ .Values.harbor.hostname }}
+
+        # Every secret the chart would otherwise randAlphaNum()/genCA() on
+        # each render (Argo CD re-renders on every sync, so they would
+        # rotate constantly). One Secret, harbor-secrets, created
+        # out-of-band — never committed; keys in docs/harbor.md.
+        existingSecretAdminPassword: harbor-secrets
+        existingSecretSecretKey: harbor-secrets
+        core:
+          existingSecret: harbor-secrets
+          existingXsrfSecret: harbor-secrets
+          # token-signing cert from cert-manager (harbor-extras)
+          secretName: harbor-token
+        jobservice:
+          existingSecret: harbor-secrets
+        registry:
+          existingSecret: harbor-secrets
+          credentials:
+            existingSecret: harbor-secrets
+
+        # jobservice's job-log PVC is RWO ceph-block, which can't attach to
+        # a second node during a rolling update.
+        updateStrategy:
+          type: Recreate
+
+        persistence:
+          persistentVolumeClaim:
+            # RWX CephFS, so registry replicas can scale out later. Kept if
+            # the app is deleted or disabled — it holds every pushed image.
+            registry:
+              storageClass: ceph-filesystem
+              accessMode: ReadWriteMany
+              size: {{ .Values.harbor.registrySize }}
+              annotations:
+                argocd.argoproj.io/sync-options: Delete=false,Prune=false
+            jobservice:
+              jobLog:
+                storageClass: ceph-block
+            database:
+              storageClass: ceph-block
+              size: 5Gi
+            redis:
+              storageClass: ceph-block
+            trivy:
+              storageClass: ceph-block
+  - repoURL: https://github.com/skywalkw3r/talos-klube.git
+    path: app/charts/harbor-extras
+    targetRevision: main
+    helm:
+      values: |
+        hostname: {{ .Values.harbor.hostname }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: harbor
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+    # cert-manager CRDs (Issuer/Certificate) come from the cert-manager app,
+    # syncing in parallel on a fresh cluster — skip their dry-run and retry.
+    - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 15s
+        factor: 2
+{{- end }}

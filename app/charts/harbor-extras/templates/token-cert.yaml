@@ -1,0 +1,29 @@
+# Harbor core signs registry bearer tokens with this key and the registry
+# verifies them with the cert (core.secretName). Left to the chart it is a
+# genCA() — regenerated on every render, which under Argo CD means a new
+# key on every sync and a constantly OutOfSync app. cert-manager issues it
+# once instead. Long-lived on purpose: core and registry only read it at
+# startup, so a renewal needs both restarted together.
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  name: harbor-token-selfsigned
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: harbor-token
+spec:
+  isCA: true
+  commonName: harbor-token-ca
+  duration: 87600h
+  secretName: harbor-token
+  privateKey:
+    algorithm: RSA
+    size: 4096
+  issuerRef:
+    name: harbor-token-selfsigned
+    kind: Issuer
+    group: cert-manager.io
