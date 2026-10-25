@@ -1,8 +1,9 @@
 # talos-klube
 
 Homelab Kubernetes on [Talos Linux](https://www.talos.dev), managed by an
-[Argo CD](https://argo-cd.readthedocs.io) app-of-apps. Exploring how far a
-fully free stack can go as an OpenShift (OCP) replacement.
+[Argo CD](https://argo-cd.readthedocs.io) app-of-apps. An example cluster
+for Talos and Kubernetes best practices, built from free, upstream
+components.
 
 Target platform: **Proxmox VE**, provisioned by OpenTofu ([tofu/](tofu/)), with
 **Cilium for everything** — CNI, kube-proxy replacement, WireGuard
@@ -259,12 +260,14 @@ cannot migrate. All explained in
 
 ## Roadmap
 
-The OCP-parity backlog lives in
+The backlog lives in
 [issues](https://github.com/skywalkw3r/talos-klube/issues) on the
 [talos-klube project board](https://github.com/users/skywalkw3r/projects/1),
-grouped under the [v1.1.0 milestone](https://github.com/skywalkw3r/talos-klube/milestone/1):
-CI validation, Renovate, OIDC/SSO, SOPS-encrypted machine configs,
-Velero, Loki, Kyverno and Harbor. New ideas go in via
+grouped by milestone:
+[v1.1.0](https://github.com/skywalkw3r/talos-klube/milestone/1) (CI
+validation, Renovate, OpenTofu, Harbor, OIDC/SSO, Kyverno) and
+[v1.2.0](https://github.com/skywalkw3r/talos-klube/milestone/2) (Velero,
+Loki, and talhelper with SOPS/age-encrypted machine configs). New ideas go in via
 the feature request form. Work happens on a branch per issue, PRs target
 `main`, and merging deploys: every Argo CD Application tracks `main`. Releases
 are tags on `main` (`v1.1.0`, …) once a milestone's work has landed.
