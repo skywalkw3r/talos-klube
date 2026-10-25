@@ -5,14 +5,14 @@ Harbor (chart `harbor` from https://helm.goharbor.io, pinned in
 the cluster a local registry: a home for lab images, Trivy scanning, and
 pull-through caches for docker.io / ghcr.io / quay.io.
 
-One Argo Application, `harbor`
+Two Argo Applications from one template
 ([templates/harbor.yaml](../app/charts/root-app/templates/harbor.yaml)),
-with two sources rendered into the `harbor` namespace:
+both switched by `apps.harbor` and both in the `harbor` namespace:
 
-| Source | What it brings |
+| Application (source) | What it brings |
 |---|---|
-| upstream `harbor` chart | core, portal, registry, jobservice, Trivy, internal Postgres + Redis, Harbor's nginx (`expose.type: clusterIP`, plain HTTP) |
-| [app/charts/harbor-extras](../app/charts/harbor-extras) | `Gateway` (class `cilium`, HTTPS, cert from `internal-ca`), the `HTTPRoute` to nginx, and the token-signing certificate |
+| `harbor` (upstream chart) | core, portal, registry, jobservice, Trivy, internal Postgres + Redis, Harbor's nginx (`expose.type: clusterIP`, plain HTTP) |
+| `harbor-extras` ([app/charts/harbor-extras](../app/charts/harbor-extras)) | `Gateway` (class `cilium`, HTTPS, cert from `internal-ca`), the `HTTPRoute` to nginx, and the token-signing certificate |
 
 Storage is Rook-Ceph: the registry on `ceph-filesystem` (RWX, 100Gi
 default, `harbor.registrySize`), the database, Redis, Trivy and job-log
