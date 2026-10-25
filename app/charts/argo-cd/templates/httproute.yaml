@@ -1,0 +1,23 @@
+# UI, API and gRPC-web (the CLI needs --grpc-web through this route) all
+# go to argocd-server's plain-HTTP port.
+#
+# `request: 0s` turns off Envoy's default 15s route timeout, which Cilium
+# keeps when none is set: the UI's server-sent event streams (application
+# and resource tree watches) stay open far longer and would be cut and
+# reconnected every 15s.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: argocd
+spec:
+  parentRefs:
+  - name: argocd
+    sectionName: https
+  hostnames:
+  - {{ .Values.global.domain | quote }}
+  rules:
+  - backendRefs:
+    - name: {{ .Release.Name }}-argocd-server
+      port: 80
+    timeouts:
+      request: 0s

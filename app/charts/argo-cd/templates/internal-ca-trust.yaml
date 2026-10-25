@@ -1,0 +1,28 @@
+{{- if .Capabilities.APIVersions.Has "cert-manager.io/v1" }}
+# Argo CD fetches Keycloak's discovery document and keys over HTTPS, from a
+# Gateway whose certificate internal-ca signed. The CA certificate lives in
+# cert-manager's namespace; a throwaway certificate from the same issuer
+# brings a copy (ca.crt) into this one. The part-of label lets argocd-cm
+# reference it, and oidc.config does: `rootCA: $internal-ca-trust:ca.crt`.
+# Argo CD watches labelled secrets, so a renewal needs no restart.
+#
+# Skipped until cert-manager's CRDs exist: bootstrap.sh renders this chart
+# offline, before cert-manager is installed.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: internal-ca-trust
+spec:
+  commonName: internal-ca-trust
+  secretName: internal-ca-trust
+  secretTemplate:
+    labels:
+      app.kubernetes.io/part-of: argocd
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: {{ .Values.clusterIssuer }}
+    kind: ClusterIssuer
+    group: cert-manager.io
+{{- end }}

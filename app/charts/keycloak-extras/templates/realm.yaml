@@ -1,0 +1,67 @@
+# The cluster realm, imported by Keycloak at startup (`start --import-realm`
+# reads /opt/keycloak/data/import, where the keycloak Application mounts
+# this ConfigMap). Keycloak imports a realm only when it doesn't exist yet:
+# edits here reach a fresh database, never a running realm. Change a live
+# realm in the admin console; see docs/sso.md.
+#
+# Both clients are public with PKCE, so there is no client secret to keep
+# anywhere: kube-apiserver and Argo CD only verify the tokens. Argo CD's
+# PKCE login redeems the code from the browser, hence the CORS
+# `webOrigins` on its client.
+#
+# Groups reach every client as a flat `groups` claim (names, not paths)
+# through a mapper on each client. A custom client scope would be tidier,
+# but listing clientScopes in an import replaces Keycloak's built-in ones
+# (basic, profile, email, ...) instead of adding to them.
+#
+# The group names are referenced by name elsewhere — keep them in step:
+#   app/charts/rbac/values.yaml           oidc.adminGroup / oidc.viewerGroup
+#   app/charts/argo-cd/values.yaml        configs.rbac policy.csv
+{{- $groupsMapper := dict
+  "name" "groups"
+  "protocol" "openid-connect"
+  "protocolMapper" "oidc-group-membership-mapper"
+  "config" (dict
+    "claim.name" "groups"
+    "full.path" "false"
+    "id.token.claim" "true"
+    "access.token.claim" "true"
+    "userinfo.token.claim" "true") }}
+{{- $realm := dict
+  "realm" .Values.realm
+  "enabled" true
+  "sslRequired" "external"
+  "bruteForceProtected" true
+  "groups" (list
+    (dict "name" "klube-admins")
+    (dict "name" "klube-viewers"))
+  "clients" (list
+    (dict
+      "clientId" "kubernetes"
+      "name" "kubectl (kubelogin)"
+      "publicClient" true
+      "standardFlowEnabled" true
+      "directAccessGrantsEnabled" false
+      "redirectUris" (list "http://localhost:8000" "http://localhost:18000")
+      "attributes" (dict "pkce.code.challenge.method" "S256")
+      "protocolMappers" (list $groupsMapper))
+    (dict
+      "clientId" "argocd"
+      "name" "Argo CD"
+      "publicClient" true
+      "standardFlowEnabled" true
+      "directAccessGrantsEnabled" false
+      "rootUrl" (printf "https://%s" .Values.argocdHostname)
+      "redirectUris" (list
+        (printf "https://%s/pkce/verify" .Values.argocdHostname)
+        "http://localhost:8085/auth/callback")
+      "webOrigins" (list "+")
+      "attributes" (dict "pkce.code.challenge.method" "S256")
+      "protocolMappers" (list $groupsMapper))) }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: keycloak-realm
+data:
+  {{ .Values.realm }}-realm.json: |
+    {{- $realm | toPrettyJson | nindent 4 }}
