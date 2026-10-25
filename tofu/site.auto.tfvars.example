@@ -1,0 +1,31 @@
+# Copy to site.auto.tfvars (gitignored) and edit for your site.
+# The Proxmox API token comes from the environment, not from here:
+#   export PROXMOX_VE_API_TOKEN='talos-klube@pve!tofu=<secret>'
+
+pve_endpoint     = "https://pve.example.lan:8006/"
+pve_insecure_tls = true # self-signed certificate on a homelab node
+pve_node         = "pve"
+# pve_ssh_username = "root"       # snippet uploads go over SSH (ssh-agent keys)
+# pve_ssh_address  = "10.5.6.2"   # if the node's API-reported address isn't reachable
+
+# image_datastore   = "local"     # needs the 'import' content type
+# snippet_datastore = "local"     # needs the 'snippets' content type
+# vm_datastore      = "local-lvm"
+# bridge            = "vmbr0"
+# vlan_id           = 56          # if the bridge is a VLAN-aware trunk
+# vm_id_base        = 800         # nodes become 801..803
+
+# cluster_name = "klube-pmx"
+node_ips = ["10.5.6.11", "10.5.6.12", "10.5.6.13"]
+vip      = "10.5.6.10"
+gateway  = "10.5.6.1"
+# prefix       = 24
+# dns_servers  = ["1.1.1.1", "9.9.9.9"]
+# api_dns_name = "k8s.example.lan" # optional, added to the API cert SANs
+
+# cp_cpu     = 4
+# cp_memory  = 8192
+# cp_disk    = 40
+# data_disk  = 100   # blank Rook-Ceph disk per node; 0 to skip
+# secureboot = true  # false = SeaBIOS + nodeID-keyed disk encryption
+# protection = true  # set false and apply before `tofu destroy`
