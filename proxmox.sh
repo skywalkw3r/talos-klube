@@ -135,7 +135,7 @@ create () {
         # Proxmox-generated network-config static (matching the machine
         # config) instead of DHCP; hostname comes from the VM name.
         # (if qm set fails: pvesm set ${SNIPPET_STORAGE} --content <existing>,snippets)
-        node_ip=$(echo "${NODE_IPS}" | cut -d, -f${i})
+        node_ip=$(echo "${NODE_IPS}" | cut -d, -f"${i}")
         pm "qm set ${vmid} --ide2 ${STORAGE}:cloudinit \
             --cicustom user=${SNIPPET_STORAGE}:snippets/talos-${name}.yaml \
             --ipconfig0 ip=${node_ip}/${PREFIX},gw=${GATEWAY} \
