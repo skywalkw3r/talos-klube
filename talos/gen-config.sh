@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ## Generate Talos machine configs for the Proxmox cluster.
+## Fallback path (`./bootstrap.sh shell`): tofu/talos.tf renders the same configs.
 ## Secrets land in talos/secrets.yaml and rendered configs in
 ## talos/clusterconfig/ — BOTH ARE GITIGNORED. Never commit them.
 ##

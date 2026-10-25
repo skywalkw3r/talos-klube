@@ -1,36 +1,82 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-## End-to-end bootstrap of the Proxmox Talos cluster:
+## Bootstrap the Proxmox Talos cluster:
 ##   configs -> VMs -> etcd bootstrap -> Gateway API CRDs -> Cilium -> Argo CD -> root-app
-## Requires: talosctl, kubectl, helm, curl, ssh access to the PVE node.
-## See proxmox.sh and talos/gen-config.sh headers for required env vars.
+##
+##   ./bootstrap.sh [tofu]   default. Run after `tofu -chdir=tofu apply`, which
+##                           does steps 1-4 (image, VMs, machine configs, etcd).
+##                           Exports kubeconfig + talosconfig from the tofu
+##                           outputs, then runs steps 5-8.
+##   ./bootstrap.sh shell    fallback without OpenTofu: steps 1-4 with
+##                           talos/gen-config.sh + proxmox.sh (qm over SSH),
+##                           then the same steps 5-8. Needs `source talos/env`;
+##                           see the proxmox.sh and gen-config.sh headers.
+##
+## Requires: kubectl, helm, curl; plus tofu (tofu mode) or talosctl and ssh
+## access to the PVE node (shell mode). LB_START/LB_STOP come from the env
+## in both modes (talos/env).
 
+MODE=${1:-tofu}
 REPO_DIR=$(cd "$(dirname "$0")" && pwd)
 GATEWAY_API_VERSION=${GATEWAY_API_VERSION:=v1.6.3}
+TOFU=${TOFU:=tofu}
 
 export TALOSCONFIG="${REPO_DIR}/talos/clusterconfig/talosconfig"
 export KUBECONFIG="${REPO_DIR}/kubeconfig"
 
-FIRST_IP=$(echo "${NODE_IPS:?set NODE_IPS}" | cut -d, -f1)
+## Steps 1-4 done by OpenTofu: write its client configs where the rest of
+## the repo expects them (both paths gitignored).
+from_tofu() {
+    echo "==> [1-4/8] provisioned by OpenTofu; exporting kubeconfig and talosconfig"
+    local out
+    out=$(mktemp -d)
+    # written 0600 to a temp dir first, so a failed export never clobbers
+    # a working kubeconfig
+    if ! ( umask 077
+           "${TOFU}" -chdir="${REPO_DIR}/tofu" output -raw kubeconfig > "${out}/kubeconfig" &&
+           "${TOFU}" -chdir="${REPO_DIR}/tofu" output -raw talosconfig > "${out}/talosconfig" ); then
+        rm -rf "${out}"
+        echo "no tofu outputs: run 'tofu -chdir=tofu apply' first (or ./bootstrap.sh shell)" >&2
+        exit 1
+    fi
+    mkdir -p "$(dirname "${TALOSCONFIG}")"
+    mv "${out}/kubeconfig" "${KUBECONFIG}"
+    mv "${out}/talosconfig" "${TALOSCONFIG}"
+    rm -rf "${out}"
+}
 
-echo "==> [1/8] generating machine configs"
-"${REPO_DIR}/talos/gen-config.sh"
+## Fallback: steps 1-4 the imperative way.
+from_shell() {
+    local first_ip
+    first_ip=$(echo "${NODE_IPS:?set NODE_IPS}" | cut -d, -f1)
 
-echo "==> [2/8] uploading Talos image and creating VMs"
-"${REPO_DIR}/proxmox.sh" upload_image
-"${REPO_DIR}/proxmox.sh" create
+    echo "==> [1/8] generating machine configs"
+    "${REPO_DIR}/talos/gen-config.sh"
 
-echo "==> [3/8] waiting for Talos API on ${FIRST_IP}, then bootstrapping etcd"
-until talosctl -n "${FIRST_IP}" version --short >/dev/null 2>&1; do
-    echo "    waiting for talos api..."; sleep 10
-done
-until talosctl -n "${FIRST_IP}" bootstrap 2>/dev/null; do
-    echo "    waiting to bootstrap etcd..."; sleep 10
-done
+    echo "==> [2/8] uploading Talos image and creating VMs"
+    "${REPO_DIR}/proxmox.sh" upload_image
+    "${REPO_DIR}/proxmox.sh" create
 
-echo "==> [4/8] fetching kubeconfig and waiting for the API server"
-talosctl -n "${FIRST_IP}" kubeconfig --force "${KUBECONFIG}"
+    echo "==> [3/8] waiting for Talos API on ${first_ip}, then bootstrapping etcd"
+    until talosctl -n "${first_ip}" version --short >/dev/null 2>&1; do
+        echo "    waiting for talos api..."; sleep 10
+    done
+    until talosctl -n "${first_ip}" bootstrap 2>/dev/null; do
+        echo "    waiting to bootstrap etcd..."; sleep 10
+    done
+
+    echo "==> [4/8] fetching kubeconfig"
+    talosctl -n "${first_ip}" kubeconfig --force "${KUBECONFIG}"
+}
+
+case "${MODE}" in
+    tofu) from_tofu ;;
+    shell) from_shell ;;
+    *) echo "usage: $0 [tofu|shell]" >&2; exit 2 ;;
+esac
+
+echo "==> waiting for the API server"
 until kubectl get nodes >/dev/null 2>&1; do
     echo "    waiting for kube-apiserver (via VIP)..."; sleep 10
 done

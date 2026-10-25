@@ -29,6 +29,16 @@ talos/env
 talos/.schematic-id
 talos/site-*.yaml
 
+# OpenTofu: local state (holds the cluster secrets), provider cache, site values.
+# tofu/.terraform.lock.hcl IS tracked.
+tofu/.terraform/
+tofu/*.tfstate
+tofu/*.tfstate.*
+tofu/.terraform.tfstate.lock.info
+tofu/*.tfplan
+tofu/terraform.tfvars
+tofu/*.auto.tfvars
+
 # SOPS / age key material — the age private key must never be committed
 age.key
 *.agekey

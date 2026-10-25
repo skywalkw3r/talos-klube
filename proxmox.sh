@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ## Provision Talos Linux VMs on Proxmox VE over SSH (qm CLI).
+## Fallback path (`./bootstrap.sh shell`): tofu/ does the same declaratively.
 ## Analogous to vmware.sh, but machine configs are delivered via
 ## cloud-init (nocloud) snippets instead of VMware guestinfo.
 ##
