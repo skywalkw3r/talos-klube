@@ -36,6 +36,10 @@ its scripts live on in git history.)
 - **Keycloak 26 on CloudNativePG 1.30** — single sign-on for Argo CD and
   kubectl (kube-apiserver OIDC), with Keycloak groups mapped to RBAC; see
   [docs/sso.md](docs/sso.md).
+- **Kyverno 1.19** — admission and background policy checks on top of
+  Pod Security Admission: a starter set (no `:latest`, requests/limits,
+  privileged only where PSA allows it) that reports to PolicyReports and
+  blocks nothing yet; see [docs/policies.md](docs/policies.md).
 
 ## Deployment flow
 
@@ -137,6 +141,7 @@ app/
   charts/argo-cd/           # Argo CD wrapper chart + its Gateway/HTTPRoute
   charts/keycloak-extras/   # Keycloak's Postgres cluster, Gateway/HTTPRoute, realm import
   charts/issuers/           # ClusterIssuers: internal CA (default), Venafi + ACME toggles
+  charts/kyverno-policies/  # Kyverno starter policies (audit-only)
 ```
 
 **Never commit:** `talos/secrets.yaml`, anything in `talos/clusterconfig/`,
@@ -228,6 +233,12 @@ Don't mix the two paths on one cluster: each has its own secrets.
   `klube-viewers` groups. kube-apiserver OIDC is a second `tofu apply`
   with `oidc` set, once Keycloak is up. Steps:
   [docs/sso.md](docs/sso.md).
+- **Policies:** Kyverno's starter policies only audit. Check
+  `kubectl get polr -A` (or Headlamp) for failures before moving one to
+  `Deny` in
+  [app/charts/kyverno-policies/values.yaml](app/charts/kyverno-policies/values.yaml);
+  which ones should, and why the others stay audit-only:
+  [docs/policies.md](docs/policies.md).
 - **Upgrades:** Renovate ([renovate.json](renovate.json)) opens PRs
   against `main`. Patches share one PR that automerges once `validate`
   passes and the release is a week old; minor/major bumps get a PR per

@@ -1,8 +1,9 @@
 # CLI Cheatsheet — talosctl + kubectl
 
 For the klube-pmx stack: Talos Linux, Cilium (Gateway API, Hubble),
-Argo CD, Rook-Ceph. Talos has **no SSH and no shell** — everything you'd
-normally do on a node happens through `talosctl` against the node's API.
+Argo CD, Rook-Ceph, Kyverno. Talos has **no SSH and no shell** —
+everything you'd normally do on a node happens through `talosctl` against
+the node's API.
 
 ## Session setup
 
@@ -150,6 +151,14 @@ kubectl get pvc -A                                             # who's using sto
 kubectl -n rook-ceph exec deploy/rook-ceph-tools -- ceph status
 ```
 
+### Kyverno
+
+```sh
+kubectl get vpol                                               # policies + status
+kubectl get polr -A                                            # pass/fail per resource
+kubectl get polr -A -o yaml | yq '.items[] | .scope as $s | .results[] | select(.result == "fail") | [.policy, $s.namespace, $s.name, .message]'
+```
+
 ---
 
 ## Coming from OpenShift (`oc`) — translation table
@@ -166,7 +175,7 @@ kubectl -n rook-ceph exec deploy/rook-ceph-tools -- ceph status
 | `oc adm top` | `kubectl top` |
 | `oc get clusterversion` | `talosctl version` + `kubectl version` |
 | `oc adm cordon/drain` | `kubectl cordon/drain` (same) |
-| SCC warnings | Pod Security Admission (namespace labels) |
+| SCC warnings | Pod Security Admission (namespace labels); Kyverno PolicyReports for the rest |
 | `oc rsh` | `kubectl exec -it` (pods only — nodes have no shell, by design) |
 | etcd backup (cluster-backup.sh) | `talosctl etcd snapshot` |
 | Web console | Argo CD UI + Hubble UI (+ Grafana from kube-prometheus-stack) |

@@ -1,0 +1,34 @@
+{{- with .Values.requireRequestsLimits }}
+{{- if .enabled }}
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: require-requests-limits
+  annotations:
+    policies.kyverno.io/title: Require Requests and Limits
+    policies.kyverno.io/category: Best Practices
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/subject: Pod
+    policies.kyverno.io/description: >-
+      The scheduler places Pods by their requests, and a container without a
+      memory limit can take a node's memory from its neighbours. Set CPU and
+      memory requests and a memory limit on every container.
+spec:
+  failurePolicy: {{ $.Values.failurePolicy }}
+  validationActions: {{- include "kyverno-policies.actions" (dict "policy" . "root" $) | nindent 4 }}
+  matchConstraints:
+    resourceRules:
+    - apiGroups: [""]
+      apiVersions: [v1]
+      operations: [CREATE, UPDATE]
+      resources: [pods]
+  validations:
+  # App containers only: init containers run to completion before them.
+  - expression: >-
+      object.spec.containers.all(c, has(c.resources) &&
+        has(c.resources.requests) && 'cpu' in c.resources.requests && 'memory' in c.resources.requests &&
+        has(c.resources.limits) && 'memory' in c.resources.limits)
+    message: >-
+      Every container needs CPU and memory requests and a memory limit.
+{{- end }}
+{{- end }}
