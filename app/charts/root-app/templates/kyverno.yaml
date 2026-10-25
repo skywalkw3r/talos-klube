@@ -1,0 +1,70 @@
+{{- if .Values.apps.kyverno }}
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kyverno
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://kyverno.github.io/kyverno/
+    chart: kyverno
+    targetRevision: {{ .Values.versions.kyverno }}
+    helm:
+      values: |
+        # Argo CD already leaves Kyverno's report kinds out of its resource
+        # tracking (the chart's default argocd-cm resource.exclusions), so
+        # nothing is needed on that side.
+        #
+        # The chart's defaults keep kube-system and the kyverno namespace
+        # out of every webhook and background scan. One admission replica
+        # is enough while every policy is failurePolicy: Ignore — an outage
+        # pauses policy results, it doesn't block Pods.
+        admissionController:
+          replicas: 1
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kyverno
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+    # Several Kyverno CRDs exceed the 262KB client-side apply annotation.
+    - ServerSideApply=true
+---
+# The starter policy set (app/charts/kyverno-policies). Its own app, after
+# Kyverno in sync-wave order; root-app doesn't wait for an Application to
+# be healthy before the next wave, so on a fresh cluster the policy CRDs may
+# still be missing: skip their dry-run and retry.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: kyverno-policies
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/skywalkw3r/talos-klube.git
+    path: app/charts/kyverno-policies
+    targetRevision: main
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: kyverno
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 15s
+        factor: 2
+{{- end }}

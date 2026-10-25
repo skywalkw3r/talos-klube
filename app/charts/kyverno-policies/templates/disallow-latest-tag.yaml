@@ -1,0 +1,36 @@
+{{- with .Values.disallowLatestTag }}
+{{- if .enabled }}
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: disallow-latest-tag
+  annotations:
+    policies.kyverno.io/title: Disallow Latest Tag
+    policies.kyverno.io/category: Best Practices
+    policies.kyverno.io/severity: medium
+    policies.kyverno.io/subject: Pod
+    policies.kyverno.io/description: >-
+      `latest` (or no tag at all) moves under a running workload, so what a
+      node pulls on restart isn't what was tested. Pin a version tag or a
+      digest.
+spec:
+  failurePolicy: {{ $.Values.failurePolicy }}
+  validationActions: {{- include "kyverno-policies.actions" (dict "policy" . "root" $) | nindent 4 }}
+  matchConstraints:
+    resourceRules:
+    - apiGroups: [""]
+      apiVersions: [v1]
+      operations: [CREATE, UPDATE]
+      resources: [pods]
+  variables: {{- include "kyverno-policies.allContainers" . | nindent 4 }}
+  validations:
+  # A digest pins the image whatever the tag says. Otherwise the tag is
+  # whatever follows the last ':' after the last '/' (a ':' before a '/' is
+  # a registry port, as in registry:5000/app).
+  - expression: >-
+      variables.containers.all(c, c.image.contains('@') ||
+        (c.image.matches(':[^/:]+$') && !c.image.endsWith(':latest')))
+    message: >-
+      Every image needs a tag other than `latest`, or a digest.
+{{- end }}
+{{- end }}

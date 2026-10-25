@@ -15,9 +15,12 @@ viewer:
     - cilium.io
     - external-secrets.io
     - gateway.networking.k8s.io
+    - kyverno.io
     - monitoring.coreos.com
     - objectbucket.io
+    - policies.kyverno.io
     - postgresql.cnpg.io
+    - wgpolicyk8s.io         # PolicyReports, from Kyverno
 
 # Keycloak groups (docs/sso.md), as kube-apiserver presents them: the
 # `groups` claim with groupsPrefix in front, set by the Talos

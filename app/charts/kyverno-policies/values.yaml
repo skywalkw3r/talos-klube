@@ -1,0 +1,43 @@
+# Starter Kyverno policy set, deployed by the `kyverno-policies` Application
+# (root-app templates/kyverno.yaml). CEL ValidatingPolicies
+# (policies.kyverno.io): Kyverno 1.19 deprecates the kyverno.io ClusterPolicy
+# kinds. Every policy reports on Pods, at admission and in background scans
+# of what's already running; results land in PolicyReports (docs/policies.md).
+#
+# Not the upstream kyverno-policies chart: that one re-implements the Pod
+# Security Standards, which Talos already enforces at `baseline` through
+# Pod Security Admission. These cover what PSA doesn't.
+
+# Default for every policy that leaves its own validationActions empty.
+# Audit records each result in a PolicyReport; Warn also returns a violation
+# to the client as a warning (kubectl prints it) without blocking anything.
+# To enforce a policy, give it [Deny, Audit]. Deny and Warn can't be combined.
+validationActions: [Audit, Warn]
+
+# What the API server does when Kyverno can't answer. Ignore: an outage of
+# Kyverno never blocks a Pod. Revisit for a policy that moves to Deny.
+failurePolicy: Ignore
+
+# Every container image carries a tag other than `latest`, or a digest.
+disallowLatestTag:
+  enabled: true
+  validationActions: []
+
+# Every container sets CPU and memory requests and a memory limit. No CPU
+# limit is asked for: it throttles a container even on an idle node.
+requireRequestsLimits:
+  enabled: true
+  validationActions: []
+
+# No privileged containers outside namespaces that opted in with the PSA
+# label below — the same label that lets them past PSA. kube-system never
+# reaches Kyverno (its default webhook namespaceSelector and resourceFilters
+# skip it). PSA already blocks these Pods at admission; this policy makes
+# them visible in reports, including Pods still running in a namespace
+# whose label was later dropped.
+disallowPrivileged:
+  enabled: true
+  validationActions: []
+  exemptNamespaceLabel:
+    key: pod-security.kubernetes.io/enforce
+    value: privileged

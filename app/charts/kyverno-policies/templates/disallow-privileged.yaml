@@ -1,0 +1,40 @@
+{{- with .Values.disallowPrivileged }}
+{{- if .enabled }}
+apiVersion: policies.kyverno.io/v1
+kind: ValidatingPolicy
+metadata:
+  name: disallow-privileged-containers
+  annotations:
+    policies.kyverno.io/title: Disallow Privileged Containers
+    policies.kyverno.io/category: Pod Security
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/subject: Pod
+    policies.kyverno.io/description: >-
+      A privileged container has the node's devices and kernel capabilities.
+      Only namespaces labelled {{ .exemptNamespaceLabel.key }}={{ .exemptNamespaceLabel.value }}
+      may run one.
+spec:
+  failurePolicy: {{ $.Values.failurePolicy }}
+  validationActions: {{- include "kyverno-policies.actions" (dict "policy" . "root" $) | nindent 4 }}
+  matchConstraints:
+    resourceRules:
+    - apiGroups: [""]
+      apiVersions: [v1]
+      operations: [CREATE, UPDATE]
+      resources: [pods]
+    # NotIn also matches namespaces without the label.
+    namespaceSelector:
+      matchExpressions:
+      - key: {{ .exemptNamespaceLabel.key }}
+        operator: NotIn
+        values: [{{ .exemptNamespaceLabel.value | quote }}]
+  variables: {{- include "kyverno-policies.allContainers" . | nindent 4 }}
+  validations:
+  - expression: >-
+      variables.containers.all(c, !has(c.securityContext) ||
+        !has(c.securityContext.privileged) || c.securityContext.privileged == false)
+    message: >-
+      Privileged containers are only allowed in namespaces labelled
+      {{ .exemptNamespaceLabel.key }}={{ .exemptNamespaceLabel.value }}.
+{{- end }}
+{{- end }}
