@@ -1,0 +1,23 @@
+# Harbor's own Gateway: Cilium gives it a LoadBalancer IP from the LB-IPAM
+# pool, and cert-manager's gateway-shim issues the listener's certificate
+# (Secret harbor-tls) from the annotated ClusterIssuer.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: harbor
+  annotations:
+    cert-manager.io/cluster-issuer: {{ .Values.clusterIssuer }}
+spec:
+  gatewayClassName: cilium
+  listeners:
+  - name: https
+    protocol: HTTPS
+    port: 443
+    hostname: {{ .Values.hostname | quote }}
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - name: harbor-tls
+    allowedRoutes:
+      namespaces:
+        from: Same

@@ -29,6 +29,9 @@ its scripts live on in git history.)
   `ceph-csi-drivers` app — see [values.yaml](app/charts/root-app/values.yaml)).
 - **KubeVirt 1.9 + CDI 1.66** — nested-virt VM workloads; see
   [the KubeVirt lab notes](docs/kubevirt-lab.md).
+- **Harbor 2.15** (opt-in, `apps.harbor`) — in-cluster registry with Trivy
+  scanning and pull-through caches, behind its own Gateway; see
+  [docs/harbor.md](docs/harbor.md).
 
 ## Deployment flow
 
@@ -209,6 +212,12 @@ Don't mix the two paths on one cluster: each has its own secrets.
 - **Expose services** with a `Gateway` + `HTTPRoute` (class `cilium`); the
   Gateway's Service gets an IP from the LB pool via L2 announcements.
   cert-manager can solve ACME via its Gateway API HTTP-01 solver.
+- **Harbor** is off by default. Before setting `apps.harbor: true`,
+  create the `harbor-secrets` Secret out-of-band (never committed) and set
+  a site `harbor.hostname`. Harbor doesn't create projects itself, so
+  after install add the docker.io / ghcr.io / quay.io proxy-cache
+  projects by hand. Commands for all of this:
+  [docs/harbor.md](docs/harbor.md).
 - **Upgrades:** Renovate proposes chart/Talos bumps; `talosctl upgrade`
   one minor at a time for the OS.
 - App toggles and chart versions live in
