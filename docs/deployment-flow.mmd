@@ -20,24 +20,24 @@ config:
 flowchart LR
 
     %% ================= WORKSTATION =================
-    subgraph LOCAL["💻 &nbsp;Workstation — bootstrap.sh"]
+    subgraph LOCAL["💻 &nbsp;Workstation — tofu apply"]
         direction TB
-        ENV["<b>talos/env</b><br/>site config: node IPs · VIP · VLAN tag<br/>LB range · API DNS name · sizing<br/><i>gitignored — site data never committed</i>"]
-        GEN["<b>talos/gen-config.sh</b><br/>talosctl gen secrets + gen config<br/>HostnameConfig doc per node (auto→explicit)<br/>LUKS2 encryption patch (TPM ⇄ nodeID)<br/>static IP + VIP + cert-SAN patches"]
-        SECRETS["<b>secrets.yaml · clusterconfig/</b><br/>fresh PKI per cluster<br/><i>gitignored — the leak that never repeats</i>"]
+        ENV["<b>tofu/site.auto.tfvars</b><br/>site config: node IPs · VIP · VLAN tag<br/>API DNS name · sizing (LB range: env)<br/><i>gitignored — site data never committed</i>"]
+        GEN["<b>siderolabs/talos provider</b><br/>machine secrets + machine configuration<br/>talos/patches/cluster.yaml + generated patches<br/>HostnameConfig doc per node (auto→explicit)<br/>LUKS2 encryption patch (TPM ⇄ nodeID)<br/>static IP + VIP + cert-SAN patches"]
+        SECRETS["<b>tofu state (local)</b><br/>fresh PKI per cluster<br/><i>gitignored — the leak that never repeats</i>"]
         ENV --> GEN --> SECRETS
     end
 
     %% ================= PROXMOX =================
-    subgraph PVE["🖥️ &nbsp;Proxmox VE host — proxmox.sh (SSH + qm)"]
+    subgraph PVE["🖥️ &nbsp;Proxmox VE host — bpg/proxmox (API + SSH for snippets)"]
         direction TB
-        IMG["<b>Talos Image Factory</b><br/>schematic: qemu-guest-agent<br/>nocloud-amd64-<b>secureboot</b>.raw.xz<br/>(Sidero-signed UKI)"]
+        IMG["<b>Talos Image Factory</b><br/>schematic: qemu-guest-agent<br/>nocloud-amd64-<b>secureboot</b>.qcow2<br/>(Sidero-signed UKI)"]
         VMS["<b>3 × control-plane VMs</b><br/>OVMF UEFI · empty efivars (setup mode)<br/>vTPM 2.0 · protection=1 · onboot=1<br/>4 vCPU · 8 GB · 40G OS + 100G Ceph disk (defaults)"]
         CIDATA["<b>cloud-init (nocloud)</b><br/>user-data = Talos machine config<br/>static ipconfig0 — no DHCP anywhere"]
         IMG --> VMS
         CIDATA --> VMS
     end
-    LOCAL -- "scp snippets" --> PVE
+    LOCAL -- "snippets over SSH" --> PVE
 
     %% ================= SECURITY CHAIN =================
     subgraph SECBOOT["🔐 &nbsp;First-boot security chain — per node"]

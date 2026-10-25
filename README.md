@@ -4,7 +4,7 @@ Homelab Kubernetes on [Talos Linux](https://www.talos.dev), managed by an
 [Argo CD](https://argo-cd.readthedocs.io) app-of-apps. Exploring how far a
 fully free stack can go as an OpenShift (OCP) replacement.
 
-Target platform: **Proxmox VE**, provisioned by `proxmox.sh`, with
+Target platform: **Proxmox VE**, provisioned by OpenTofu ([tofu/](tofu/)), with
 **Cilium for everything** — CNI, kube-proxy replacement, WireGuard
 encryption, LB-IPAM + L2 announcements, Gateway API, Hubble. (The
 original vSphere/flannel/MetalLB/ingress-nginx generation is retired;
@@ -40,14 +40,14 @@ config:
     curve: basis
 ---
 flowchart LR
-    subgraph LOCAL["Workstation — bootstrap.sh"]
+    subgraph LOCAL["Workstation — tofu apply"]
         direction TB
-        ENV["talos/env<br/>site config (gitignored)"]
-        GEN["talos/gen-config.sh<br/>secrets + per-node machine configs"]
+        ENV["tofu/site.auto.tfvars<br/>site config (gitignored)"]
+        GEN["siderolabs/talos provider<br/>secrets + per-node machine configs"]
         ENV --> GEN
     end
 
-    subgraph PVE["Proxmox VE — proxmox.sh (SSH + qm)"]
+    subgraph PVE["Proxmox VE — bpg/proxmox (API + SSH)"]
         direction TB
         IMG["Image Factory<br/>nocloud secureboot image"]
         VMS["3 × control-plane VMs<br/>OVMF · vTPM · protection=1"]
@@ -55,7 +55,7 @@ flowchart LR
         IMG --> VMS
         CI --> VMS
     end
-    LOCAL -- "scp snippets" --> PVE
+    LOCAL -- "snippets over SSH" --> PVE
 
     subgraph SEC["First-boot security chain"]
         direction TB
@@ -116,11 +116,12 @@ an `oc` translation table) live in
 ## Repo layout
 
 ```
-proxmox.sh                  # provision Talos VMs on Proxmox (qm over SSH)
-bootstrap.sh                # end-to-end: configs -> VMs -> Cilium -> Argo CD
+tofu/                       # OpenTofu: image, VMs, machine configs, etcd bootstrap (see tofu/README.md)
+bootstrap.sh                # after tofu: Gateway API CRDs -> Cilium -> Argo CD -> root-app
+proxmox.sh                  # fallback: provision Talos VMs on Proxmox (qm over SSH)
 talos/
-  patches/cluster.yaml      # committed machine-config patch (no secrets)
-  gen-config.sh             # renders per-node configs into talos/clusterconfig/ (gitignored)
+  patches/cluster.yaml      # committed machine-config patch (no secrets), used by tofu and gen-config.sh
+  gen-config.sh             # fallback: renders per-node configs into talos/clusterconfig/ (gitignored)
 app/
   bootstrap/                # per-cluster root Application manifests
   charts/root-app/          # app-of-apps: one Application template per component
@@ -130,28 +131,39 @@ app/
 ```
 
 **Never commit:** `talos/secrets.yaml`, anything in `talos/clusterconfig/`,
-`kubeconfig`, `talosconfig`, or rendered Helm output (embedded generated
-CAs). All are gitignored — keep it that way.
+`kubeconfig`, `talosconfig`, OpenTofu state and `*.auto.tfvars` in `tofu/`,
+or rendered Helm output (embedded generated CAs). All are gitignored — keep
+it that way.
 
 ## Deploying the Proxmox cluster
 
-Prerequisites: `talosctl`, `kubectl`, `helm`, `curl`, and SSH key access to
-the PVE node. DHCP is not used — pick static IPs on your VLAN.
+Prerequisites: `tofu` (OpenTofu ≥ 1.8), `kubectl`, `helm`, `curl`, and
+`talosctl` for day-2. On the PVE host: a Proxmox API token, SSH key
+access, and `import` + `snippets` content on the image/snippet storage
+([tofu/README.md](tofu/README.md#proxmox-host-prerequisites) has the
+exact privileges). DHCP is not used — pick static IPs on your VLAN.
 
 ```sh
-# 1. fill in site config: SSH target, node IPs, VIP, GATEWAY/PREFIX, sizing,
-#    and LB_START/LB_STOP (LoadBalancer IP range — applied at bootstrap and
-#    deliberately never committed). talos/env is gitignored.
-cp talos/env.example talos/env && $EDITOR talos/env
-source talos/env
-# 2. push to main — every Argo CD Application tracks `main` on GitHub,
+# 1. site config: PVE endpoint/node, node IPs, VIP, gateway, sizing.
+#    tofu/site.auto.tfvars is gitignored.
+cp tofu/site.auto.tfvars.example tofu/site.auto.tfvars && $EDITOR tofu/site.auto.tfvars
+export PROXMOX_VE_API_TOKEN='talos-klube@pve!tofu=<secret>'
+# 2. image -> VMs -> machine configs -> etcd bootstrap
+tofu -chdir=tofu init
+tofu -chdir=tofu apply
+# 3. push to main — every Argo CD Application tracks `main` on GitHub,
 #    not your working tree
-# 3. run it:
+# 4. LoadBalancer IP range (applied at bootstrap, deliberately never
+#    committed), then Gateway API CRDs + Cilium + Argo CD:
+export LB_START=10.5.6.200 LB_STOP=10.5.6.220
 ./bootstrap.sh
 ```
 
-`bootstrap.sh` generates fresh cluster secrets locally, provisions the VMs,
-bootstraps etcd, installs Gateway API CRDs + Cilium + Argo CD, then applies
+OpenTofu generates fresh cluster secrets (kept only in the local,
+gitignored state), provisions the VMs, applies the machine configs and
+bootstraps etcd. `bootstrap.sh` then writes `kubeconfig` and
+`talos/clusterconfig/talosconfig` from the tofu outputs, installs Gateway
+API CRDs + Cilium + Argo CD, and applies
 [root-app-proxmox.yaml](app/bootstrap/root-app-proxmox.yaml) — from there
 Argo CD owns the cluster. Useful afterwards:
 
@@ -162,7 +174,26 @@ kubectl -n kube-system exec ds/cilium -- cilium-dbg encrypt status   # WireGuard
 kubectl -n kube-system port-forward svc/hubble-ui 12000:80           # flow map
 ```
 
-Teardown: `./proxmox.sh destroy`
+Teardown (the PVE protection flag has to come off first):
+
+```sh
+tofu -chdir=tofu apply -var protection=false
+tofu -chdir=tofu destroy
+```
+
+### Fallback: shell scripts, no OpenTofu
+
+The original imperative path still works and renders the same machine
+configs: `talos/gen-config.sh` (talosctl) and `proxmox.sh` (`qm` over SSH),
+driven by `talos/env`:
+
+```sh
+cp talos/env.example talos/env && $EDITOR talos/env && source talos/env
+./bootstrap.sh shell        # configs -> VMs -> etcd -> Cilium -> Argo CD
+./proxmox.sh destroy        # teardown
+```
+
+Don't mix the two paths on one cluster: each has its own secrets.
 
 ## Day-2 notes
 
@@ -209,7 +240,7 @@ The OCP-parity backlog lives in
 [talos-klube project board](https://github.com/users/skywalkw3r/projects/1),
 grouped under the [v1.1.0 milestone](https://github.com/skywalkw3r/talos-klube/milestone/1):
 CI validation, Renovate, OIDC/SSO, SOPS-encrypted machine configs,
-OpenTofu provisioning, Velero, Loki, Kyverno and Harbor. New ideas go in via
+Velero, Loki, Kyverno and Harbor. New ideas go in via
 the feature request form. Work happens on a branch per issue, PRs target
 `main`, and merging deploys: every Argo CD Application tracks `main`. Releases
 are tags on `main` (`v1.1.0`, …) once a milestone's work has landed.

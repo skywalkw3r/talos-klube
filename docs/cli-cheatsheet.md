@@ -14,7 +14,9 @@ export KUBECONFIG=$PWD/kubeconfig
 ```
 
 `talosctl` targets come from the talosconfig (`config endpoint` / `config node`
-are pre-set by `gen-config.sh`). Add `-n <node-ip>` to aim at a specific node.
+are pre-set: node IPs as endpoints, the first node as default — written by
+`bootstrap.sh` from the tofu outputs, or by `gen-config.sh` on the fallback
+path). Add `-n <node-ip>` to aim at a specific node.
 
 ---
 
