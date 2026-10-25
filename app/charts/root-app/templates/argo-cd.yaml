@@ -10,6 +10,25 @@ spec:
     repoURL: https://github.com/skywalkw3r/talos-klube.git
     path: app/charts/argo-cd
     targetRevision: main
+    helm:
+      values: |
+        global:
+          domain: {{ .Values.argoCd.hostname }}
+        {{- if .Values.apps.keycloak }}
+        # SSO through Keycloak (docs/sso.md). PKCE with a public client:
+        # no client secret. rootCA resolves from the labelled Secret that
+        # app/charts/argo-cd/templates/internal-ca-trust.yaml creates.
+        argo-cd:
+          configs:
+            cm:
+              oidc.config: |
+                name: Keycloak
+                issuer: https://{{ .Values.keycloak.hostname }}/auth/realms/{{ .Values.keycloak.realm }}
+                clientID: argocd
+                enablePKCEAuthentication: true
+                requestedScopes: [openid, profile, email]
+                rootCA: $internal-ca-trust:ca.crt
+        {{- end }}
   destination:
     server: https://kubernetes.default.svc
     namespace: argo-cd

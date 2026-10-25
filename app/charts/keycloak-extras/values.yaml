@@ -1,0 +1,28 @@
+# Site glue for the upstream keycloakx chart, deployed by the
+# `keycloak-extras` Application (root-app templates/keycloak.yaml) into the
+# same namespace. root-app passes hostname, realm and argocdHostname from
+# its own keycloak.* / argoCd.* values.
+
+# PLACEHOLDERS — the real names are set per site (see docs/sso.md).
+hostname: keycloak.example.internal
+argocdHostname: argocd.example.internal
+
+# Realm imported on Keycloak's first start (templates/realm.yaml). The
+# issuer every client trusts is https://<hostname>/auth/realms/<realm>.
+realm: klube
+
+# Signs the Gateway's serving certificate (cert-manager gateway-shim).
+clusterIssuer: internal-ca
+
+# CloudNativePG Cluster `keycloak-db` (templates/database.yaml).
+database:
+  # Primary + streaming replica: CNPG fails over in seconds, where a
+  # single instance waits for its RWO volume to move to another node.
+  instances: 2
+  storageClass: ceph-block
+  size: 5Gi
+  # Pinned rather than the operator's default, which moves with operator
+  # upgrades. A major bump here is an in-place major upgrade of the data.
+  image:
+    repository: ghcr.io/cloudnative-pg/postgresql
+    tag: 18.6-system-trixie

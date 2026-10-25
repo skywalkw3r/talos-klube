@@ -1,7 +1,7 @@
 # Machine configs, rendered the way talos/gen-config.sh does with
 # `talosctl gen config`: the committed talos/patches/cluster.yaml plus
-# generated patches for DNS, disk encryption, cert SANs, install target
-# and the per-node network/hostname.
+# generated patches for DNS, disk encryption, cert SANs, OIDC, install
+# target and the per-node network/hostname.
 
 locals {
   nodes = {
@@ -58,12 +58,41 @@ locals {
     }),
   ])]
 
+  # Optional kube-apiserver OIDC login through Keycloak (docs/sso.md). Talos
+  # always runs kube-apiserver with --authentication-config and rejects the
+  # --oidc-* flags, so OIDC is a jwt entry in KubeAuthenticationConfig.
+  # Talos treats `configuration` as opaque and a patch replaces it whole,
+  # so this carries the generated anonymous health-check rules as well.
+  # Usernames and groups get an "oidc:" prefix: no Keycloak name can pass
+  # for a built-in one (system:masters); app/charts/rbac binds the groups.
+  oidc_patches = var.oidc == null ? [] : [yamlencode({
+    apiVersion = "v1alpha1"
+    kind       = "KubeAuthenticationConfig"
+    configuration = {
+      anonymous = {
+        enabled    = true
+        conditions = [for p in ["/livez", "/readyz", "/healthz"] : { path = p }]
+      }
+      jwt = [{
+        issuer = {
+          url                  = var.oidc.issuer_url
+          audiences            = [var.oidc.audience]
+          certificateAuthority = file(var.oidc.ca_file)
+        }
+        claimMappings = {
+          username = { claim = "preferred_username", prefix = "oidc:" }
+          groups   = { claim = "groups", prefix = "oidc:" }
+        }
+      }]
+    }
+  })]
+
   common_patches = concat([
     file("${path.module}/../talos/patches/cluster.yaml"),
     local.dns_patch,
     local.encryption_patch,
     local.install_patch,
-  ], local.san_patches)
+  ], local.san_patches, local.oidc_patches)
 
   # Static IP + VIP on the physical NIC, and the hostname. Hostname lives
   # in the HostnameConfig document, generated as `auto: stable`; auto and

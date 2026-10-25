@@ -109,6 +109,27 @@ variable "api_dns_name" {
   default     = null
 }
 
+variable "oidc" {
+  description = <<-EOT
+    kube-apiserver OIDC login through Keycloak (docs/sso.md); null = off.
+    issuer_url: https://<keycloak hostname>/auth/realms/<realm>.
+    ca_file: PEM of the CA that signs Keycloak's certificate (the exported
+    internal-ca.crt), relative to tofu/ or absolute.
+    audience: the Keycloak client kubectl logs in with.
+  EOT
+  type = object({
+    issuer_url = string
+    ca_file    = string
+    audience   = optional(string, "kubernetes")
+  })
+  default = null
+
+  validation {
+    condition     = var.oidc == null || startswith(try(var.oidc.issuer_url, ""), "https://")
+    error_message = "oidc.issuer_url must be an https:// URL."
+  }
+}
+
 variable "gateway" {
   description = "Default gateway for the nodes."
   type        = string

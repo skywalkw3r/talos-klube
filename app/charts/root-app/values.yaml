@@ -8,6 +8,7 @@ apps:
   cdi: true              # disk import; pairs with kubevirt
   cephCsiDrivers: true   # RBD/CephFS CSI drivers; required by Rook >= 1.20
   certManager: true
+  cloudnativePg: true    # Postgres operator; keycloak's database needs it
   cilium: true
   kubevirt: true
   externalSecrets: true
@@ -15,7 +16,7 @@ apps:
   harbor: false          # needs harbor-secrets + a site hostname first; docs/harbor.md
   headlamp: true
   issuers: true
-  keycloak: true
+  keycloak: true         # also turns on Argo CD SSO; docs/sso.md
   kubePrometheusStack: true
   metricsServer: true
   rbac: true
@@ -40,6 +41,17 @@ harbor:
   hostname: harbor.example.internal
   registrySize: 100Gi
 
+# Single sign-on (templates/keycloak.yaml, templates/argo-cd.yaml;
+# docs/sso.md). The hostnames are PLACEHOLDERS like harbor.hostname: set
+# them per site. Each drives a Gateway listener and its certificate, and
+# the Keycloak one is part of the OIDC issuer every client checks:
+# https://<keycloak.hostname>/auth/realms/<keycloak.realm>.
+keycloak:
+  hostname: keycloak.example.internal
+  realm: klube
+argoCd:
+  hostname: argocd.example.internal
+
 versions:
   # Each pin carries a `# renovate:` annotation naming its upstream, which a
   # custom manager in /renovate.json reads; keep it directly above the key.
@@ -55,6 +67,8 @@ versions:
   cephCsiDrivers: 1.1.0
   # renovate: datasource=helm depName=cert-manager registryUrl=https://charts.jetstack.io
   certManager: v1.21.3
+  # renovate: datasource=helm depName=cloudnative-pg registryUrl=https://cloudnative-pg.github.io/charts
+  cloudnativePg: 0.29.1
   # renovate: datasource=helm depName=external-secrets registryUrl=https://charts.external-secrets.io
   externalSecrets: 2.14.0
   # renovate: datasource=github-releases depName=kubernetes-sigs/gateway-api

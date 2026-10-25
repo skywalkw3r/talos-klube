@@ -1,0 +1,24 @@
+# Keycloak's database. CNPG creates the `keycloak` database and owner and
+# writes the owner's credentials to Secret keycloak-db-app, which the
+# keycloak Application reads (KC_DB_PASSWORD); clients connect through
+# Service keycloak-db-rw, which always points at the primary.
+#
+# The PVCs belong to this Cluster and are garbage-collected with it, so
+# Argo CD must never delete or prune it: disabling the app keeps the realm
+# data.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: keycloak-db
+  annotations:
+    argocd.argoproj.io/sync-options: Delete=false,Prune=false
+spec:
+  instances: {{ .Values.database.instances }}
+  imageName: {{ .Values.database.image.repository }}:{{ .Values.database.image.tag }}
+  storage:
+    storageClass: {{ .Values.database.storageClass }}
+    size: {{ .Values.database.size }}
+  bootstrap:
+    initdb:
+      database: keycloak
+      owner: keycloak

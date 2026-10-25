@@ -13,15 +13,45 @@ spec:
     targetRevision: {{ .Values.versions.keycloakx }}
     helm:
       values: |
-        # DEV MODE: embedded H2, realm config is EPHEMERAL (lost on pod
-        # restart). Before real use: CloudNativePG + `start` + KC_DB env.
+        # Production mode on the CloudNativePG database from keycloak-extras
+        # (Cluster keycloak-db). --import-realm creates the cluster realm
+        # from the keycloak-realm ConfigMap on first start only.
         command:
           - /opt/keycloak/bin/kc.sh
         args:
-          - start-dev
-          - --http-relative-path=/auth
+          - start
+          - --import-realm
+        database:
+          vendor: postgres
+          hostname: keycloak-db-rw
+          port: 5432
+          database: keycloak
+          username: keycloak
+          existingSecret: keycloak-db-app
+          existingSecretKey: password
+        # Hold Keycloak until the database answers, instead of crash-looping
+        # while CNPG brings up a fresh cluster.
+        dbchecker:
+          enabled: true
+        # TLS terminates at the Gateway (keycloak-extras); Envoy sends
+        # X-Forwarded-*, not RFC 7239 Forwarded.
+        proxy:
+          mode: xforwarded
+        extraVolumes: |
+          - name: realm
+            configMap:
+              name: keycloak-realm
+        extraVolumeMounts: |
+          - name: realm
+            mountPath: /opt/keycloak/data/import
+            readOnly: true
         # Expects Secret keycloak-admin (key: password) in the keycloak
-        # namespace, created out-of-band — never committed.
+        # namespace, created out-of-band — never committed. Only used to
+        # create the master-realm admin on an empty database.
+        #
+        # KC_HOSTNAME is a bare hostname: scheme comes from
+        # X-Forwarded-Proto and the path from the request (/auth), so token
+        # issuers are https://<hostname>/auth/realms/<realm>.
         extraEnv: |
           - name: KC_BOOTSTRAP_ADMIN_USERNAME
             value: admin
@@ -30,10 +60,8 @@ spec:
               secretKeyRef:
                 name: keycloak-admin
                 key: password
-          - name: KC_PROXY_HEADERS
-            value: xforwarded
-          - name: KC_HOSTNAME_STRICT
-            value: "false"
+          - name: KC_HOSTNAME
+            value: {{ .Values.keycloak.hostname }}
   destination:
     server: https://kubernetes.default.svc
     namespace: keycloak
@@ -43,4 +71,48 @@ spec:
       selfHeal: true
     syncOptions:
     - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 15s
+        factor: 2
+---
+# Site glue next to the chart, in the same namespace: the CNPG database,
+# Gateway + HTTPRoute and the realm import (app/charts/keycloak-extras).
+# A separate app rather than a second source so every Application stays
+# single-source.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: keycloak-extras
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/skywalkw3r/talos-klube.git
+    path: app/charts/keycloak-extras
+    targetRevision: main
+    helm:
+      values: |
+        hostname: {{ .Values.keycloak.hostname }}
+        realm: {{ .Values.keycloak.realm }}
+        argocdHostname: {{ .Values.argoCd.hostname }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: keycloak
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+    # CNPG and cert-manager CRDs come from their own apps, syncing in
+    # parallel on a fresh cluster — skip their dry-run and retry.
+    - SkipDryRunOnMissingResource=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 15s
+        factor: 2
 {{- end }}

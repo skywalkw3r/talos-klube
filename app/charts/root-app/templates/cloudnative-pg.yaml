@@ -1,0 +1,29 @@
+{{- if .Values.apps.cloudnativePg }}
+# CloudNativePG operator: Postgres as a `Cluster` CR, so apps get a real,
+# replicated database instead of an embedded one (first user: Keycloak,
+# app/charts/keycloak-extras).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cloudnative-pg
+  finalizers:
+  - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://cloudnative-pg.github.io/charts
+    chart: cloudnative-pg
+    targetRevision: {{ .Values.versions.cloudnativePg }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: cnpg-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+    - CreateNamespace=true
+    # The Cluster/Pooler CRDs are past the client-side-apply annotation
+    # limit; upstream installs them server-side too.
+    - ServerSideApply=true
+{{- end }}

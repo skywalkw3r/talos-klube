@@ -18,7 +18,8 @@ The machine configs match what `talos/gen-config.sh` renders with
 `talosctl gen config`, document for document: the committed
 [`talos/patches/cluster.yaml`](../talos/patches/cluster.yaml) is read with
 `file()`, and the generated patches (DNS, LUKS2 encryption, install target,
-cert SANs, per-node network and hostname) are built in `talos.tf`.
+cert SANs, kube-apiserver OIDC, per-node network and hostname) are built in
+`talos.tf`.
 
 ## Proxmox host prerequisites
 
@@ -68,7 +69,7 @@ cluster secrets and the admin kubeconfig. Treat it like
 
 ## Day 2
 
-- **Config changes** (patches, DNS, SANs): edit, then `tofu apply`. The
+- **Config changes** (patches, DNS, SANs, `oidc`): edit, then `tofu apply`. The
   config is pushed to the running nodes (`apply_mode` auto: no reboot
   unless the change needs one). The cloud-init snippet is updated too, but
   Talos only reads it on first boot.

@@ -1,0 +1,25 @@
+# Argo CD's own Gateway: Cilium gives it a LoadBalancer IP from the LB-IPAM
+# pool, and cert-manager's gateway-shim issues the listener's certificate
+# (Secret argocd-tls) from the annotated ClusterIssuer. Until cert-manager
+# runs (bootstrap.sh installs Argo CD first) the listener just has no
+# certificate; port-forwarding still works.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: argocd
+  annotations:
+    cert-manager.io/cluster-issuer: {{ .Values.clusterIssuer }}
+spec:
+  gatewayClassName: cilium
+  listeners:
+  - name: https
+    protocol: HTTPS
+    port: 443
+    hostname: {{ .Values.global.domain | quote }}
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - name: argocd-tls
+    allowedRoutes:
+      namespaces:
+        from: Same

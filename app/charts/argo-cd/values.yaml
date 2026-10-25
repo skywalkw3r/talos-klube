@@ -1,3 +1,14 @@
+# Argo CD's hostname: the Gateway listener and its certificate
+# (templates/) and argocd-cm `url` (the chart builds it from global.domain).
+# PLACEHOLDER — root-app passes the site's argoCd.hostname; bootstrap.sh
+# installs with this default until Argo CD takes itself over.
+global:
+  domain: argocd.example.internal
+
+# Signs the Gateway's serving certificate, and is the CA Argo CD trusts for
+# Keycloak (templates/internal-ca-trust.yaml).
+clusterIssuer: internal-ca
+
 argo-cd:
   dex:
     enabled: false
@@ -9,3 +20,13 @@ argo-cd:
     params:
       # TLS terminates at the edge (Gateway/Ingress); server speaks HTTP.
       server.insecure: true
+    # SSO: oidc.config comes from root-app (templates/argo-cd.yaml), which
+    # knows the Keycloak hostname. Keycloak groups map to Argo CD roles
+    # here; the group names are created by the realm import in
+    # app/charts/keycloak-extras. Anyone else who signs in gets no access
+    # (policy.default stays empty). The local admin stays enabled as
+    # break-glass.
+    rbac:
+      policy.csv: |
+        g, klube-admins, role:admin
+        g, klube-viewers, role:readonly

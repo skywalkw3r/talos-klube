@@ -17,3 +17,16 @@ viewer:
     - gateway.networking.k8s.io
     - monitoring.coreos.com
     - objectbucket.io
+    - postgresql.cnpg.io
+
+# Keycloak groups (docs/sso.md), as kube-apiserver presents them: the
+# `groups` claim with groupsPrefix in front, set by the Talos
+# KubeAuthenticationConfig patch (tofu/talos.tf, talos/gen-config.sh) so an
+# OIDC group can never pass for a built-in one like system:masters. The
+# bindings are inert until that patch is applied. Group names come from the
+# realm import in app/charts/keycloak-extras.
+oidc:
+  enabled: true
+  groupsPrefix: "oidc:"
+  adminGroup: klube-admins      # cluster-admin
+  viewerGroup: klube-viewers    # view, plus the viewer's cluster-read role above

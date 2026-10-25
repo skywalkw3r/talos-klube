@@ -17,6 +17,9 @@ set -euo pipefail
 #   export PREFIX=24
 #   export DNS_SERVERS='1.1.1.1,9.9.9.9'
 #   export INSTALL_DISK=/dev/sda
+#   export OIDC_ISSUER_URL=   # kube-apiserver OIDC via Keycloak, see docs/sso.md:
+#   export OIDC_CA_FILE=      #   issuer URL + PEM of the CA that signs its cert
+#   export OIDC_AUDIENCE=kubernetes
 
 CLUSTER_NAME=${CLUSTER_NAME:=klube-pmx}
 TALOS_VERSION=${TALOS_VERSION:=v1.14.4}
@@ -92,6 +95,43 @@ EOF
     SAN_PATCH=(--config-patch @"${OUT}/patch-sans.yaml")
 fi
 
+# Optional kube-apiserver OIDC through Keycloak (kept out of git — env
+# only). Talos rejects --oidc-* flags, so it is a jwt entry in
+# KubeAuthenticationConfig. A patch replaces that document's
+# `configuration` whole, hence the generated anonymous health-check rules
+# repeated here. "oidc:" prefixes keep Keycloak names apart from built-in
+# ones (system:masters); app/charts/rbac binds the groups.
+OIDC_PATCH=()
+if [ -n "${OIDC_ISSUER_URL:-}" ]; then
+    : "${OIDC_CA_FILE:?set OIDC_CA_FILE, the PEM of the CA that signs the Keycloak certificate}"
+    cat > "${OUT}/patch-oidc.yaml" <<EOF
+apiVersion: v1alpha1
+kind: KubeAuthenticationConfig
+configuration:
+  anonymous:
+    enabled: true
+    conditions:
+      - path: /livez
+      - path: /readyz
+      - path: /healthz
+  jwt:
+    - issuer:
+        url: ${OIDC_ISSUER_URL}
+        audiences:
+          - ${OIDC_AUDIENCE:-kubernetes}
+        certificateAuthority: |
+$(sed 's/^/          /' "${OIDC_CA_FILE}")
+      claimMappings:
+        username:
+          claim: preferred_username
+          prefix: "oidc:"
+        groups:
+          claim: groups
+          prefix: "oidc:"
+EOF
+    OIDC_PATCH=(--config-patch @"${OUT}/patch-oidc.yaml")
+fi
+
 # Upstream DNS servers (ResolverConfig document, merged with the hostDNS
 # settings from patches/cluster.yaml)
 dns_yaml=""
@@ -112,6 +152,7 @@ talosctl gen config "${CLUSTER_NAME}" "https://${VIP}:6443" \
     --config-patch @"${OUT}/patch-dns.yaml" \
     ${SB_PATCH[@]+"${SB_PATCH[@]}"} \
     ${SAN_PATCH[@]+"${SAN_PATCH[@]}"} \
+    ${OIDC_PATCH[@]+"${OIDC_PATCH[@]}"} \
     --with-docs=false --with-examples=false \
     --output-types controlplane,talosconfig \
     --output "${OUT}/" --force

@@ -32,6 +32,9 @@ its scripts live on in git history.)
 - **Harbor 2.15** (opt-in, `apps.harbor`) — in-cluster registry with Trivy
   scanning and pull-through caches, behind its own Gateway; see
   [docs/harbor.md](docs/harbor.md).
+- **Keycloak 26 on CloudNativePG 1.30** — single sign-on for Argo CD and
+  kubectl (kube-apiserver OIDC), with Keycloak groups mapped to RBAC; see
+  [docs/sso.md](docs/sso.md).
 
 ## Deployment flow
 
@@ -130,7 +133,8 @@ app/
   bootstrap/                # per-cluster root Application manifests
   charts/root-app/          # app-of-apps: one Application template per component
   charts/cilium/            # Cilium wrapper chart + LB-IPAM/L2 policy
-  charts/argo-cd/           # Argo CD wrapper chart
+  charts/argo-cd/           # Argo CD wrapper chart + its Gateway/HTTPRoute
+  charts/keycloak-extras/   # Keycloak's Postgres cluster, Gateway/HTTPRoute, realm import
   charts/issuers/           # ClusterIssuers: internal CA (default), Venafi + ACME toggles
 ```
 
@@ -218,6 +222,11 @@ Don't mix the two paths on one cluster: each has its own secrets.
   after install add the docker.io / ghcr.io / quay.io proxy-cache
   projects by hand. Commands for all of this:
   [docs/harbor.md](docs/harbor.md).
+- **SSO:** set site `keycloak.hostname` and `argoCd.hostname`, create the
+  `keycloak-admin` Secret, and add users to the `klube-admins` /
+  `klube-viewers` groups. kube-apiserver OIDC is a second `tofu apply`
+  with `oidc` set, once Keycloak is up. Steps:
+  [docs/sso.md](docs/sso.md).
 - **Upgrades:** Renovate ([renovate.json](renovate.json)) opens PRs
   against `main`. Patches share one PR that automerges once `validate`
   passes and the release is a week old; minor/major bumps get a PR per

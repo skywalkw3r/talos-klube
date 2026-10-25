@@ -23,6 +23,13 @@ gateway  = "10.5.6.1"
 # dns_servers  = ["1.1.1.1", "9.9.9.9"]
 # api_dns_name = "k8s.example.lan" # optional, added to the API cert SANs
 
+# kube-apiserver OIDC via Keycloak — a second apply, once Keycloak is up and
+# internal-ca.crt is exported (docs/sso.md):
+# oidc = {
+#   issuer_url = "https://keycloak.example.internal/auth/realms/klube"
+#   ca_file    = "../internal-ca.crt"
+# }
+
 # cp_cpu     = 4
 # cp_memory  = 8192
 # cp_disk    = 40
