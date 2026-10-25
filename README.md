@@ -218,8 +218,13 @@ Don't mix the two paths on one cluster: each has its own secrets.
   after install add the docker.io / ghcr.io / quay.io proxy-cache
   projects by hand. Commands for all of this:
   [docs/harbor.md](docs/harbor.md).
-- **Upgrades:** Renovate proposes chart/Talos bumps; `talosctl upgrade`
-  one minor at a time for the OS.
+- **Upgrades:** Renovate ([renovate.json](renovate.json)) opens PRs
+  against `main`. Patches share one PR that automerges once `validate`
+  passes and the release is a week old; minor/major bumps get a PR per
+  component. Rook, Talos and KubeVirt/CDI never automerge: run
+  `app/charts/vendor.sh` on a KubeVirt/CDI PR's branch before merging, and
+  `talosctl upgrade` one minor at a time for the OS. A new pin in the
+  root-app `versions:` map needs a `# renovate:` annotation above it.
 - App toggles and chart versions live in
   [values.yaml](app/charts/root-app/values.yaml); per-cluster overlay
   files (e.g. `values-proxmox.yaml`) carry any divergence.
