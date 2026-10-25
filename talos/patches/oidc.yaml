@@ -1,0 +1,36 @@
+# Kubernetes OIDC login through Keycloak (docs/sso.md), enabled from
+# talconfig.yaml once Keycloak is up. Needs, in talos/env:
+#   OIDC_ISSUER_URL  e.g. https://keycloak.example.internal/auth/realms/klube
+#   OIDC_CA_PEM      PEM of the CA that signs the Keycloak certificate, on
+#                    one line with \n escapes (env.example derives it from
+#                    OIDC_CA_FILE); the double quotes below turn them back
+#                    into newlines
+#   OIDC_AUDIENCE    optional, defaults to kubernetes
+#
+# Talos rejects the --oidc-* flags, so OIDC is a jwt entry in
+# KubeAuthenticationConfig. A patch replaces that document's
+# `configuration` whole, hence the generated anonymous health-check rules
+# repeated here. "oidc:" prefixes keep Keycloak names apart from built-in
+# ones (system:masters); app/charts/rbac binds the groups.
+apiVersion: v1alpha1
+kind: KubeAuthenticationConfig
+configuration:
+  anonymous:
+    enabled: true
+    conditions:
+      - path: /livez
+      - path: /readyz
+      - path: /healthz
+  jwt:
+    - issuer:
+        url: ${OIDC_ISSUER_URL}
+        audiences:
+          - ${OIDC_AUDIENCE:-kubernetes}
+        certificateAuthority: "${OIDC_CA_PEM}"
+      claimMappings:
+        username:
+          claim: preferred_username
+          prefix: "oidc:"
+        groups:
+          claim: groups
+          prefix: "oidc:"

@@ -1,0 +1,116 @@
+# Talos machine configs for the Proxmox cluster, rendered by talhelper on
+# the fallback path (`./bootstrap.sh shell`); tofu/talos.tf renders the same
+# documents on the default path. Run from this directory:
+#
+#   source env && talhelper genconfig
+#
+# Secrets come from talsecret.sops.yaml (age-encrypted, NOT committed; see
+# "Secrets" in the README) and the rendered configs land in clusterconfig/
+# (plaintext, gitignored). Site values come from the environment (talos/env,
+# see env.example) so no addressing lives in git. talhelper strips comments
+# before substituting, then fails on any unset or empty ${VAR} without a
+# default.
+clusterName: ${CLUSTER_NAME:-klube-pmx}
+talosVersion: ${TALOS_VERSION:-v1.14.4}
+# Keep in step with kubernetes_version in tofu/variables.tf (the talosctl
+# default for talosVersion).
+kubernetesVersion: ${KUBERNETES_VERSION:-v1.37.1}
+endpoint: https://${VIP}:6443
+
+# Optional DNS name for the API endpoint, on both the Talos API and the
+# kube-apiserver certs (KubeAPIServerConfig below). Unset, it falls back to
+# the VIP, which is already a SAN, so nothing changes.
+additionalMachineCertSans:
+  - ${API_DNS_NAME:-$VIP}
+
+# Same installer images as tofu/talos.tf: installer[-secureboot], not
+# talhelper's default metal-installer[-secureboot].
+imageFactory:
+  installerURLTmpl: "{{.RegistryURL}}/installer{{if .Secureboot}}-secureboot{{end}}/{{.ID}}:{{.Version}}"
+
+patches:
+  # Shared with tofu/talos.tf: no flannel, no kube-proxy, schedulable
+  # control planes, hostDNS.
+  - "@./patches/cluster.yaml"
+  # Disk encryption (VolumeConfig STATE/EPHEMERAL): TPM-sealed keys with
+  # Secure Boot, nodeID keys without. SECUREBOOT is true or false.
+  - "@./patches/encryption-secureboot-${SECUREBOOT:-true}.yaml"
+  # Kubernetes OIDC through Keycloak (docs/sso.md): uncomment once Keycloak
+  # is up, and set OIDC_ISSUER_URL and OIDC_CA_PEM in talos/env.
+  # - "@./patches/oidc.yaml"
+  - |-
+    apiVersion: v1alpha1
+    kind: KubeAPIServerConfig
+    certExtraSANs:
+      - ${API_DNS_NAME:-$VIP}
+  # Upstream DNS servers (merged with the hostDNS settings from
+  # patches/cluster.yaml).
+  - |-
+    apiVersion: v1alpha1
+    kind: ResolverConfig
+    nameservers:
+      - address: ${DNS1:-1.1.1.1}
+      - address: ${DNS2:-9.9.9.9}
+
+controlPlane:
+  # Same file names as before (clusterconfig/klube-pmx-m1.yaml), which
+  # proxmox.sh uploads as each VM's cloud-init user-data.
+  filenameTmpl: "{{.Hostname}}.yaml"
+  machineSpec:
+    secureboot: ${SECUREBOOT:-true}
+  # Image Factory schematic, same as proxmox.sh and tofu/image.tf.
+  schematic:
+    customization:
+      systemExtensions:
+        officialExtensions:
+          - siderolabs/qemu-guest-agent
+
+# Per node: static IP and the shared VIP on the physical NIC. The hostname
+# goes in the HostnameConfig document and matches the VM name the Proxmox
+# nocloud meta-data reports.
+nodes:
+  - hostname: ${CLUSTER_NAME:-klube-pmx}-m1
+    ipAddress: ${NODE1_IP}
+    controlPlane: true
+    installDisk: ${INSTALL_DISK:-/dev/sda}
+    networkInterfaces:
+      - deviceSelector:
+          physical: true
+        dhcp: false
+        addresses:
+          - ${NODE1_IP}/${PREFIX:-24}
+        routes:
+          - network: 0.0.0.0/0
+            gateway: ${GATEWAY}
+        vip:
+          ip: ${VIP}
+  - hostname: ${CLUSTER_NAME:-klube-pmx}-m2
+    ipAddress: ${NODE2_IP}
+    controlPlane: true
+    installDisk: ${INSTALL_DISK:-/dev/sda}
+    networkInterfaces:
+      - deviceSelector:
+          physical: true
+        dhcp: false
+        addresses:
+          - ${NODE2_IP}/${PREFIX:-24}
+        routes:
+          - network: 0.0.0.0/0
+            gateway: ${GATEWAY}
+        vip:
+          ip: ${VIP}
+  - hostname: ${CLUSTER_NAME:-klube-pmx}-m3
+    ipAddress: ${NODE3_IP}
+    controlPlane: true
+    installDisk: ${INSTALL_DISK:-/dev/sda}
+    networkInterfaces:
+      - deviceSelector:
+          physical: true
+        dhcp: false
+        addresses:
+          - ${NODE3_IP}/${PREFIX:-24}
+        routes:
+          - network: 0.0.0.0/0
+            gateway: ${GATEWAY}
+        vip:
+          ip: ${VIP}

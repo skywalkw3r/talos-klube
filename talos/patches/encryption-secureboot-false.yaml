@@ -1,0 +1,21 @@
+# Disk encryption for SECUREBOOT=false, picked by talconfig.yaml.
+# Secure Boot off: keys derived from the node identity (no TPM).
+# Keep encryption in ONE patch only: key lists merge by appending, and two
+# keys claiming the same LUKS slot fail validation.
+apiVersion: v1alpha1
+kind: VolumeConfig
+name: STATE
+encryption:
+  provider: luks2
+  keys:
+    - nodeID: {}
+      slot: 0
+---
+apiVersion: v1alpha1
+kind: VolumeConfig
+name: EPHEMERAL
+encryption:
+  provider: luks2
+  keys:
+    - nodeID: {}
+      slot: 0

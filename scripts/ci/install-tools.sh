@@ -84,10 +84,20 @@ install_talosctl() {
     install -m 0755 "${TMP}/${f}" "${BIN_DIR}/talosctl"
 }
 
-[ $# -gt 0 ] || { echo "usage: $0 helm|yq|shellcheck|talosctl..." >&2; exit 1; }
+install_talhelper() {
+    local v=${TALHELPER_VERSION:?set TALHELPER_VERSION} f url
+    f="talhelper_${OS}_${ARCH}.tar.gz"
+    url="https://github.com/budimanjojo/talhelper/releases/download/${v}"
+    curl -fsSL -o "${TMP}/${f}" "${url}/${f}"
+    verify "${TMP}/${f}" "$(curl -fsSL "${url}/checksums.txt" | awk -v f="${f}" '$2 == f { print $1 }')"
+    tar -xzf "${TMP}/${f}" -C "${TMP}" talhelper
+    install -m 0755 "${TMP}/talhelper" "${BIN_DIR}/talhelper"
+}
+
+[ $# -gt 0 ] || { echo "usage: $0 helm|yq|shellcheck|talosctl|talhelper..." >&2; exit 1; }
 for tool in "$@"; do
     case "${tool}" in
-        helm | yq | shellcheck | talosctl) "install_${tool}" ;;
+        helm | yq | shellcheck | talosctl | talhelper) "install_${tool}" ;;
         *) echo "unknown tool: ${tool}" >&2; exit 1 ;;
     esac
     echo "installed ${tool} -> ${BIN_DIR}/${tool}"
