@@ -118,6 +118,7 @@ an `oc` translation table) live in
 ```
 proxmox.sh                  # provision Talos VMs on Proxmox (qm over SSH)
 bootstrap.sh                # end-to-end: configs -> VMs -> Cilium -> Argo CD
+scripts/ci/                 # PR checks run by .github/workflows/validate.yml (also run locally)
 talos/
   patches/cluster.yaml      # committed machine-config patch (no secrets)
   gen-config.sh             # renders per-node configs into talos/clusterconfig/ (gitignored)
