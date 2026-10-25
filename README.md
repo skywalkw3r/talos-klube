@@ -119,6 +119,7 @@ an `oc` translation table) live in
 tofu/                       # OpenTofu: image, VMs, machine configs, etcd bootstrap (see tofu/README.md)
 bootstrap.sh                # after tofu: Gateway API CRDs -> Cilium -> Argo CD -> root-app
 proxmox.sh                  # fallback: provision Talos VMs on Proxmox (qm over SSH)
+scripts/ci/                 # PR checks run by .github/workflows/validate.yml (also run locally)
 talos/
   patches/cluster.yaml      # committed machine-config patch (no secrets), used by tofu and gen-config.sh
   gen-config.sh             # fallback: renders per-node configs into talos/clusterconfig/ (gitignored)

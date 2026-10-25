@@ -98,6 +98,7 @@ HELM_CAPS="${HELM_CAPS} --set cilium.prometheus.serviceMonitor.enabled=false \
 --set cilium.hubble.metrics.serviceMonitor.enabled=false"
 # First pass: CiliumLoadBalancerIPPool/L2AnnouncementPolicy fail until the
 # Cilium CRDs register — expected; re-applied strictly after rollout.
+# shellcheck disable=SC2086 # HELM_CAPS is a flag list, word-split on purpose
 helm template cilium "${REPO_DIR}/app/charts/cilium" -n kube-system ${HELM_CAPS} \
     | kubectl apply --server-side -f - || echo "    (partial apply expected on first pass)"
 kubectl -n kube-system rollout status ds/cilium --timeout=10m
@@ -109,6 +110,7 @@ for crd in ciliuml2announcementpolicies.cilium.io ciliumloadbalancerippools.cili
     done
     kubectl wait --for=condition=established "crd/${crd}" --timeout=120s
 done
+# shellcheck disable=SC2086 # HELM_CAPS is a flag list, word-split on purpose
 helm template cilium "${REPO_DIR}/app/charts/cilium" -n kube-system ${HELM_CAPS} \
     | kubectl apply --server-side -f -
 
