@@ -202,10 +202,14 @@ cannot migrate. All explained in
 **[docs/kubevirt-lab.md](docs/kubevirt-lab.md)** · diagram
 [docs/kubevirt-lab.mmd](docs/kubevirt-lab.mmd).
 
-## TODO (OCP-parity backlog)
+## Roadmap
 
-- OIDC auth (Keycloak/Dex) for kube-apiserver + Argo CD SSO
-- Velero backups, Loki logging, Kyverno policies, Harbor registry
-- talhelper + SOPS/age for encrypted-in-repo machine configs
-- CI validation + Renovate (in progress)
+The OCP-parity backlog lives in
+[issues](https://github.com/skywalkw3r/talos-klube/issues) on the
+[talos-klube project board](https://github.com/users/skywalkw3r/projects/1),
+grouped under the [v1.1.0 milestone](https://github.com/skywalkw3r/talos-klube/milestone/1):
+CI validation, Renovate, OIDC/SSO, SOPS-encrypted machine configs,
+Terraform provisioning, Velero, Loki, Kyverno and Harbor. New ideas go in via
+the feature request form; work branches from `dev`, PRs target `dev`, and
+`dev` merges to `main` for a tagged release.
 

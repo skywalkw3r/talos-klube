@@ -1,0 +1,57 @@
+name: Feature request
+description: Propose a component, capability or improvement for the cluster
+labels: ["enhancement"]
+projects: ["skywalkw3r/1"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What
+      description: The feature, in a sentence or two.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: The problem it solves or the OCP-parity gap it closes.
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: Checklist of what has to be true to close this.
+      value: |
+        - [ ]
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - talos
+        - gitops
+        - security
+        - storage
+        - observability
+        - platform
+        - ci
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - p1 (next up)
+        - p2 (soon)
+        - p3 (someday)
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Links, upstream docs, constraints (no site addresses or secrets — this repo is public).
